@@ -1,0 +1,156 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1723;
+  --panel: #161f2e;
+  --panel-2: #1b2637;
+  --border: #2b3b52;
+  --text: #e8eef8;
+  --muted: #9fb0c7;
+  --primary: #3a7be0;
+  --primary-hover: #4b89e8;
+  --danger: #8a3540;
+  --danger-hover: #9a3f4b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  width: 360px;
+  max-width: 100vw;
+  padding: 12px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 4px 0 12px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+}
+
+.block {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.grid {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #cfd8e6;
+}
+
+.hint {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--muted);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #d8e2f0;
+}
+
+.checkbox input {
+  margin: 0;
+}
+
+select,
+input[type="file"] {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  padding: 7px 9px;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #243148;
+}
+
+.btn-primary {
+  border-color: #3f7fdd;
+  background: var(--primary);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-danger {
+  border-color: #9f4552;
+  background: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-hover);
+}
+
+#resetBtn {
+  grid-column: 1 / -1;
+}
+
+.status {
+  margin: 0;
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 9px 10px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+}

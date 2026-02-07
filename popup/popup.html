@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITD Banner Redraw</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="app">
+    <h1>ITD Banner Redraw</h1>
+    <p class="subtitle">Точное вписывание изображения в баннер itd.com</p>
+
+    <section class="block">
+      <button id="detectCanvasBtn" class="btn btn-primary">Найти canvas (800x267)</button>
+      <button id="selectAreaBtn" class="btn">Выбрать область вручную</button>
+    </section>
+
+    <section class="block">
+      <label class="label" for="imageInput">Изображение</label>
+      <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" multiple>
+      <p id="imageMeta" class="hint">Файл не выбран.</p>
+    </section>
+
+    <section class="block">
+      <label class="label" for="fitMode">Режим вписывания</label>
+      <select id="fitMode">
+        <option value="cover">Cover (заполнить)</option>
+        <option value="contain">Contain (вместить)</option>
+        <option value="stretch">Stretch (растянуть)</option>
+      </select>
+    </section>
+
+    <section class="block">
+      <label class="label" for="resampleMode">Цвет и пиксели</label>
+      <select id="resampleMode">
+        <option value="pixel">Pixel Perfect (без сглаживания)</option>
+        <option value="smooth">Smooth (мягкое сглаживание)</option>
+      </select>
+    </section>
+
+    <section class="block grid">
+      <label for="scaleRange">Масштаб <span id="scaleValue">100%</span></label>
+      <input id="scaleRange" type="range" min="20" max="300" step="1" value="100">
+
+      <label for="offsetXRange">Сдвиг X <span id="offsetXValue">0px</span></label>
+      <input id="offsetXRange" type="range" min="-400" max="400" step="1" value="0">
+
+      <label for="offsetYRange">Сдвиг Y <span id="offsetYValue">0px</span></label>
+      <input id="offsetYRange" type="range" min="-300" max="300" step="1" value="0">
+
+      <label for="opacityRange">Прозрачность <span id="opacityValue">100%</span></label>
+      <input id="opacityRange" type="range" min="1" max="100" step="1" value="100">
+    </section>
+
+    <section class="block">
+      <label class="checkbox">
+        <input id="autoPasteApply" type="checkbox" checked>
+        <span>Ctrl+V сразу применяет в canvas</span>
+      </label>
+      <p class="hint">Вставка работает прямо на странице итд.com из буфера обмена.</p>
+    </section>
+
+    <section class="block actions">
+      <button id="applyBtn" class="btn btn-primary">Применить в canvas</button>
+      <button id="exportBtn" class="btn">Скачать PNG (fallback)</button>
+      <button id="resetBtn" class="btn btn-danger">Сброс</button>
+    </section>
+
+    <p id="status" class="status">Открой окно рисования на сайте, затем нажми "Найти canvas".</p>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+#itd-redraw-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+  font-family: "SF Pro Display", "Avenir Next", "Segoe UI Variable", "Trebuchet MS", sans-serif;
+}
+
+#itd-redraw-target {
+  position: absolute;
+  border: 1px solid rgba(175, 224, 255, 0.88);
+  background: linear-gradient(160deg, rgba(135, 201, 255, 0.11), rgba(106, 143, 255, 0.09));
+  backdrop-filter: blur(6px) saturate(120%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+    0 10px 28px rgba(5, 8, 17, 0.35);
+  box-sizing: border-box;
+}
+
+#itd-redraw-clip {
+  position: absolute;
+  overflow: hidden;
+}
+
+#itd-redraw-image {
+  position: absolute;
+  transform-origin: center center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+#itd-redraw-badge {
+  position: absolute;
+  top: -33px;
+  left: 0;
+  max-width: 420px;
+  color: #f4f8ff;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.2) 0%, rgba(142, 200, 255, 0.1) 45%, rgba(130, 157, 255, 0.18) 100%),
+    rgba(9, 16, 30, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 11px;
+  font-size: 12px;
+  line-height: 16px;
+  padding: 5px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(12px) saturate(125%);
+  box-shadow: 0 10px 24px rgba(4, 11, 26, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+#itd-redraw-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  max-width: 440px;
+  z-index: 2147483647;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.23), rgba(168, 205, 255, 0.14)),
+    rgba(11, 18, 31, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.31);
+  color: #f4f8ff;
+  font-size: 13px;
+  line-height: 17px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  backdrop-filter: blur(13px) saturate(126%);
+  box-shadow: 0 12px 26px rgba(6, 12, 25, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+#itd-redraw-toast[data-show="1"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#itd-redraw-select-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background:
+    radial-gradient(120px 120px at 15% 15%, rgba(154, 210, 255, 0.12), transparent 70%),
+    rgba(2, 7, 20, 0.2);
+  cursor: crosshair;
+}
+
+#itd-redraw-select-box {
+  position: absolute;
+  border: 1px solid rgba(172, 225, 255, 0.95);
+  background: linear-gradient(145deg, rgba(109, 178, 255, 0.22), rgba(138, 118, 255, 0.16));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.42) inset, 0 8px 22px rgba(8, 14, 30, 0.35);
+}

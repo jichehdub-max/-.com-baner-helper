@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "ITD Banner Redraw Helper",
+  "version": "1.0.0",
+  "description": "Select an area, fit an image precisely, preview it, and apply to canvas.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "ITD Banner Redraw",
+    "default_popup": "popup/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
