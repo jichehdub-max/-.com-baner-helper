@@ -61,6 +61,25 @@
       <p class="hint">Вставка работает прямо на странице итд.com из буфера обмена.</p>
     </section>
 
+    <section class="block grid">
+      <label class="label" for="aiEndpointInput">AI API Endpoint</label>
+      <input id="aiEndpointInput" type="text" placeholder="https://.../v1/chat/completions" spellcheck="false">
+
+      <label class="label" for="aiApiKeyInput">AI API Key</label>
+      <input id="aiApiKeyInput" type="password" placeholder="sk-..." spellcheck="false">
+
+      <label class="label" for="aiModelInput">AI Model</label>
+      <input id="aiModelInput" type="text" placeholder="gpt-4o-mini" spellcheck="false">
+
+      <label class="label" for="aiPromptInput">Тема поста</label>
+      <textarea id="aiPromptInput" rows="3" placeholder="О чем написать пост?"></textarea>
+
+      <div class="actions ai-actions">
+        <button id="aiGenerateBtn" class="btn btn-primary">Сгенерировать и вставить</button>
+      </div>
+      <p class="hint">Генерация автоматически вставляет текст в поле "Что у вас нового?".</p>
+    </section>
+
     <section class="block actions">
       <button id="applyBtn" class="btn btn-primary">Применить в canvas</button>
       <button id="exportBtn" class="btn">Скачать PNG (fallback)</button>
