@@ -41,8 +41,30 @@ async function getActiveTabId() {
   return tab.id;
 }
 
-async function sendToActiveTab(message) {
-  const tabId = await getActiveTabId();
+function isRestrictedUrl(url) {
+  if (!url || typeof url !== "string") {
+    return true;
+  }
+  const lowered = url.toLowerCase();
+  return (
+    lowered.startsWith("chrome://") ||
+    lowered.startsWith("edge://") ||
+    lowered.startsWith("about:") ||
+    lowered.startsWith("chrome-extension://") ||
+    lowered.startsWith("view-source:")
+  );
+}
+
+async function getActiveTab() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs[0];
+  if (!tab || typeof tab.id !== "number") {
+    throw new Error("Не удалось получить активную вкладку.");
+  }
+  return tab;
+}
+
+async function sendMessageToTab(tabId, message) {
   return new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(tabId, message, (response) => {
       const err = chrome.runtime.lastError;
@@ -53,6 +75,42 @@ async function sendToActiveTab(message) {
       resolve(response || null);
     });
   });
+}
+
+async function ensureContentScript(tab) {
+  if (isRestrictedUrl(tab.url || "")) {
+    throw new Error("Эта вкладка не поддерживает расширения (служебная страница браузера).");
+  }
+
+  try {
+    await chrome.scripting.insertCSS({
+      target: { tabId: tab.id },
+      files: ["content/content.css"]
+    });
+  } catch (err) {
+    // CSS может быть уже вставлен — это не критично.
+  }
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["content/content.js"]
+  });
+}
+
+async function sendToActiveTab(message) {
+  const tab = await getActiveTab();
+  try {
+    return await sendMessageToTab(tab.id, message);
+  } catch (err) {
+    const text = String(err?.message || "");
+    const missingReceiver = text.includes("Receiving end does not exist") || text.includes("Could not establish connection");
+    if (!missingReceiver) {
+      throw err;
+    }
+
+    await ensureContentScript(tab);
+    return sendMessageToTab(tab.id, message);
+  }
 }
 
 function setStatus(text, isError = false) {

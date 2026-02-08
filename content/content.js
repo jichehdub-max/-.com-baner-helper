@@ -31,7 +31,8 @@
       startX: 0,
       startY: 0,
       baseOffsetX: 0,
-      baseOffsetY: 0
+      baseOffsetY: 0,
+      previewBox: null
     },
     targetWatchTimer: null
   };
@@ -352,23 +353,39 @@
     chrome.storage.local.set({ [SETTINGS_KEY]: state.settings }, () => {});
   }
 
+  function hasVisibleDrawingCanvas() {
+    return Array.from(document.querySelectorAll("canvas.drawing-canvas")).some(isCanvasVisible);
+  }
+
+  function isPointInRect(x, y, rect) {
+    if (!rect) {
+      return false;
+    }
+    return x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height;
+  }
+
+  function canStartPreviewDrag(event) {
+    if (event.button !== 0) {
+      return false;
+    }
+    if (!state.target || !getPrimaryImage()) {
+      return false;
+    }
+    return isPointInRect(event.clientX, event.clientY, state.drag.previewBox);
+  }
+
   function clearTarget() {
+    endPreviewDrag();
     state.target = null;
     state.targetCanvas = null;
+    state.drag.previewBox = null;
     if (state.ui?.target) {
       state.ui.target.style.display = "none";
     }
   }
 
   function beginPreviewDrag(event) {
-    if (event.button !== 0) {
-      return;
-    }
-    if (!state.target || !getPrimaryImage()) {
-      return;
-    }
-    const rect = getViewportTargetRect();
-    if (!rect) {
+    if (!canStartPreviewDrag(event)) {
       return;
     }
 
@@ -384,6 +401,7 @@
     if (state.ui?.image) {
       state.ui.image.dataset.dragging = "1";
     }
+    document.documentElement.style.cursor = "grabbing";
   }
 
   function updatePreviewDrag(event) {
@@ -407,7 +425,15 @@
     if (state.ui?.image) {
       delete state.ui.image.dataset.dragging;
     }
+    document.documentElement.style.cursor = "";
     persistSettings();
+  }
+
+  function handlePreviewPointerDown(event) {
+    if (state.selection) {
+      return;
+    }
+    beginPreviewDrag(event);
   }
 
   function ensureOverlay() {
@@ -522,6 +548,7 @@
 
     if (!targetRect) {
       endPreviewDrag();
+      state.drag.previewBox = null;
       ui.target.style.display = "none";
       return;
     }
@@ -541,6 +568,7 @@
     if (!previewImage) {
       ui.image.style.display = "none";
       ui.image.style.pointerEvents = "none";
+      state.drag.previewBox = null;
       const canvasMeta = getCanvasMeta(state.targetCanvas);
       if (canvasMeta) {
         ui.badge.textContent = `Область ${Math.round(targetRect.width)}x${Math.round(targetRect.height)} CSS | canvas ${canvasMeta.width}x${canvasMeta.height}px`;
@@ -570,6 +598,12 @@
     const previewSource = previewImage.previewSrc || previewImage.src;
     ui.image.style.backgroundImage = previewSource ? `url("${previewSource}")` : "none";
     ui.image.style.imageRendering = state.settings.resampleMode === "pixel" ? "pixelated" : "auto";
+    state.drag.previewBox = {
+      left: targetRect.left + box.x,
+      top: targetRect.top + box.y,
+      width: box.width,
+      height: box.height
+    };
 
     const sourceLabel = state.target.source === "canvas" ? "canvas" : "manual";
     const canvasMeta = getCanvasMeta(state.targetCanvas);
@@ -584,10 +618,24 @@
   }
 
   function watchTargetLifecycle() {
-    if (!state.target || !state.target.boundToCanvas) {
+    if (!state.target) {
       return;
     }
-    if (!state.targetCanvas || !state.targetCanvas.isConnected || !isCanvasVisible(state.targetCanvas)) {
+
+    const hasDrawingCanvas = hasVisibleDrawingCanvas();
+    if (!hasDrawingCanvas && state.target.source !== "manual") {
+      clearTarget();
+      renderPreview();
+      return;
+    }
+
+    if (state.target.boundToCanvas && (!state.targetCanvas || !state.targetCanvas.isConnected || !isCanvasVisible(state.targetCanvas))) {
+      clearTarget();
+      renderPreview();
+      return;
+    }
+
+    if (!hasDrawingCanvas && state.target.source === "manual") {
       clearTarget();
       renderPreview();
     }
@@ -1309,6 +1357,7 @@
     true
   );
 
+  window.addEventListener("mousedown", handlePreviewPointerDown, true);
   window.addEventListener("mousemove", updatePreviewDrag, true);
   window.addEventListener("mouseup", endPreviewDrag, true);
   window.addEventListener("blur", endPreviewDrag);
