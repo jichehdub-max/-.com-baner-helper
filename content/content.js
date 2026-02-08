@@ -184,6 +184,296 @@
     return false;
   }
 
+  function isElementVisible(element) {
+    if (!(element instanceof Element)) {
+      return false;
+    }
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 6 || rect.height < 6) {
+      return false;
+    }
+    const style = window.getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) < 0.05) {
+      return false;
+    }
+    return rect.bottom > 0 && rect.right > 0 && rect.left < window.innerWidth && rect.top < window.innerHeight;
+  }
+
+  function getComposerHintText(element) {
+    if (!(element instanceof Element)) {
+      return "";
+    }
+    const parts = [
+      element.getAttribute("placeholder"),
+      element.getAttribute("aria-label"),
+      element.getAttribute("data-placeholder"),
+      element.getAttribute("name"),
+      element.getAttribute("id"),
+      typeof element.className === "string" ? element.className : ""
+    ].filter((value) => typeof value === "string" && value.trim().length > 0);
+    return parts.join(" ").toLowerCase();
+  }
+
+  function scoreComposerCandidate(element) {
+    if (!(element instanceof Element)) {
+      return -1;
+    }
+
+    let score = 0;
+    const hints = getComposerHintText(element);
+    const text = (element.textContent || "").toLowerCase();
+    const rect = element.getBoundingClientRect();
+
+    if (element instanceof HTMLTextAreaElement) {
+      score += 6;
+    }
+    if (element instanceof HTMLInputElement) {
+      score += element.type === "text" ? 2 : -2;
+    }
+    if (element instanceof HTMLElement && element.isContentEditable) {
+      score += 8;
+    }
+    if (element.matches("[role='textbox']")) {
+      score += 4;
+    }
+
+    if (hints.includes("что у вас нового")) {
+      score += 18;
+    }
+    if (hints.includes("пост")) {
+      score += 6;
+    }
+    if (hints.includes("post") || hints.includes("publish") || hints.includes("new")) {
+      score += 4;
+    }
+    if (text.includes("что у вас нового")) {
+      score += 10;
+    }
+    if (rect.height >= 36) {
+      score += 3;
+    }
+    if (rect.width >= 260) {
+      score += 2;
+    }
+
+    return score;
+  }
+
+  function collectComposerCandidates(root) {
+    if (!(root instanceof Element || root instanceof Document)) {
+      return [];
+    }
+
+    const selectors = [
+      "textarea",
+      "input[type='text']",
+      "[contenteditable='true']",
+      "[contenteditable='plaintext-only']",
+      "[role='textbox']"
+    ];
+    const items = [];
+    selectors.forEach((selector) => {
+      root.querySelectorAll(selector).forEach((node) => {
+        if (!(node instanceof Element)) {
+          return;
+        }
+        if (!isElementVisible(node)) {
+          return;
+        }
+        if (!items.includes(node)) {
+          items.push(node);
+        }
+      });
+    });
+    return items;
+  }
+
+  function findExactItdComposer(includeHidden = false) {
+    const selectors = [
+      "textarea.wall-post-form__textarea[placeholder='Что у вас нового?']",
+      "textarea.wall-post-form__textarea[aria-label='Что у вас нового?']",
+      "textarea.wall-post-form__textarea[name='Что у вас нового?']",
+      "textarea.wall-post-form__textarea[role='textbox'][placeholder*='Что у вас нового']",
+      "textarea.wall-post-form__textarea[placeholder*='Что у вас нового']",
+      "textarea.wall-post-form__textarea[placeholder*='что у вас нового']",
+      ".wall-post-form__content textarea.wall-post-form__textarea",
+      ".wall-post-form__content textarea[role='textbox'][placeholder*='Что у вас нового']",
+      ".wall-post-form__content textarea[placeholder*='Что у вас нового']",
+      "textarea[placeholder*='Что у вас нового']",
+      "textarea[placeholder*='что у вас нового']",
+      "textarea.wall-post-form__textarea"
+    ];
+
+    for (const selector of selectors) {
+      const nodes = Array.from(document.querySelectorAll(selector));
+      for (const node of nodes) {
+        if (!(node instanceof Element)) {
+          continue;
+        }
+        if (!includeHidden && !isElementVisible(node)) {
+          continue;
+        }
+        return node;
+      }
+    }
+
+    return null;
+  }
+
+  function findPostComposer() {
+    const exactVisible = findExactItdComposer(false);
+    if (exactVisible) {
+      return exactVisible;
+    }
+
+    const publishButtons = Array.from(document.querySelectorAll("button, [role='button'], a")).filter((node) => {
+      if (!(node instanceof Element) || !isElementVisible(node)) {
+        return false;
+      }
+      const text = (node.textContent || "").trim().toLowerCase();
+      return text.includes("опубликовать") || text.includes("publish");
+    });
+
+    const scopedCandidates = [];
+    publishButtons.forEach((button) => {
+      const scope = button.closest("form, section, article, div");
+      if (!scope) {
+        return;
+      }
+      collectComposerCandidates(scope).forEach((candidate) => {
+        if (!scopedCandidates.includes(candidate)) {
+          scopedCandidates.push(candidate);
+        }
+      });
+    });
+
+    const candidates = scopedCandidates.length > 0 ? scopedCandidates : collectComposerCandidates(document);
+    if (candidates.length === 0) {
+      return findExactItdComposer(true);
+    }
+
+    candidates.sort((a, b) => scoreComposerCandidate(b) - scoreComposerCandidate(a));
+    return candidates[0] || null;
+  }
+
+  function resolveEditableComposerTarget(candidate) {
+    if (!candidate) {
+      return null;
+    }
+    if (candidate instanceof HTMLTextAreaElement || candidate instanceof HTMLInputElement) {
+      return candidate;
+    }
+    if (candidate instanceof HTMLElement && candidate.isContentEditable) {
+      return candidate;
+    }
+    if (candidate instanceof Element) {
+      const nested = candidate.querySelector("[contenteditable='true'], [contenteditable='plaintext-only']");
+      if (nested instanceof HTMLElement && nested.isContentEditable) {
+        return nested;
+      }
+    }
+    return null;
+  }
+
+  function dispatchComposerInputEvents(target, text) {
+    const base = { bubbles: true, cancelable: false, composed: true };
+    try {
+      target.dispatchEvent(new InputEvent("input", { ...base, inputType: "insertText", data: text }));
+    } catch (err) {
+      target.dispatchEvent(new Event("input", base));
+    }
+    target.dispatchEvent(new Event("change", base));
+  }
+
+  function setInputLikeValue(target, text) {
+    const prototype = target instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+    if (descriptor && descriptor.set) {
+      descriptor.set.call(target, text);
+    } else {
+      target.value = text;
+    }
+    dispatchComposerInputEvents(target, text);
+  }
+
+  function setContentEditableValue(target, text) {
+    target.focus();
+    const selection = window.getSelection();
+    if (selection) {
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    let applied = false;
+    if (typeof document.execCommand === "function") {
+      try {
+        applied = document.execCommand("insertText", false, text);
+      } catch (err) {
+        applied = false;
+      }
+    }
+    if (!applied) {
+      target.textContent = text;
+    }
+
+    dispatchComposerInputEvents(target, text);
+  }
+
+  function openComposerHint() {
+    const hintNodes = Array.from(document.querySelectorAll("div, span, p")).filter((node) => {
+      if (!(node instanceof Element) || !isElementVisible(node)) {
+        return false;
+      }
+      const text = (node.textContent || "").trim().toLowerCase();
+      return text === "что у вас нового?" || text === "что у вас нового";
+    });
+
+    if (hintNodes.length === 0) {
+      return false;
+    }
+
+    const node = hintNodes[0];
+    node.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window }));
+    node.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window }));
+    node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+    return true;
+  }
+
+  function insertTextToPostComposer(text) {
+    if (typeof text !== "string" || text.trim().length === 0) {
+      return { ok: false, message: "Текст для вставки пустой." };
+    }
+
+    let candidate = findPostComposer();
+    if (!candidate && openComposerHint()) {
+      candidate = findPostComposer();
+    }
+    if (!candidate) {
+      return { ok: false, message: "Не найдено поле поста. Откройте вкладку 'Посты' и фокус на строке 'Что у вас нового?'." };
+    }
+
+    const target = resolveEditableComposerTarget(candidate);
+    if (!target) {
+      return { ok: false, message: "Поле найдено, но оно не поддерживает вставку." };
+    }
+
+    const finalText = text.trim();
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+      target.focus();
+      setInputLikeValue(target, finalText);
+    } else {
+      setContentEditableValue(target, finalText);
+    }
+
+    try {
+      target.scrollIntoView({ block: "center", inline: "nearest" });
+    } catch (err) {}
+
+    return { ok: true, message: "Текст вставлен в поле поста." };
+  }
+
   function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1269,6 +1559,14 @@
         await startVideoLoop(state.loopJob.canvas, state.loopJob.region);
       }
       return { ok: true, message: "Настройки применены." };
+    }
+
+    if (message.type === "ITD_REDRAW_INSERT_POST_TEXT") {
+      const text = message.payload?.text;
+      if (typeof text !== "string" || text.trim().length === 0) {
+        return { ok: false, message: "Не передан текст для поста." };
+      }
+      return insertTextToPostComposer(text);
     }
 
     if (message.type === "ITD_REDRAW_APPLY_CANVAS") {

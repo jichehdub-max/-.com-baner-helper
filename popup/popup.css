@@ -87,7 +87,10 @@ h1 {
 }
 
 select,
-input[type="file"] {
+input[type="file"],
+input[type="text"],
+input[type="password"],
+textarea {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -95,6 +98,12 @@ input[type="file"] {
   color: var(--text);
   font-size: 12px;
   padding: 7px 9px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 68px;
+  line-height: 1.35;
 }
 
 input[type="range"] {
@@ -107,6 +116,10 @@ input[type="range"] {
   gap: 7px;
 }
 
+.ai-actions {
+  grid-template-columns: 1fr;
+}
+
 .btn {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -115,6 +128,11 @@ input[type="range"] {
   font-size: 12px;
   padding: 8px 10px;
   cursor: pointer;
+}
+
+.btn:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .btn:hover {
