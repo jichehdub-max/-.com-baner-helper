@@ -1,3 +1,8 @@
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Build artifacts / packaged plugin files
+*.zip
+*.crx
+*.xpi
