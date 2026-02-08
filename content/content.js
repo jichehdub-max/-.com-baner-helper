@@ -25,7 +25,15 @@
     ui: null,
     selection: null,
     toastTimer: null,
-    loopJob: null
+    loopJob: null,
+    drag: {
+      active: false,
+      startX: 0,
+      startY: 0,
+      baseOffsetX: 0,
+      baseOffsetY: 0
+    },
+    targetWatchTimer: null
   };
 
   function clamp(value, min, max) {
@@ -340,6 +348,68 @@
     });
   }
 
+  function persistSettings() {
+    chrome.storage.local.set({ [SETTINGS_KEY]: state.settings }, () => {});
+  }
+
+  function clearTarget() {
+    state.target = null;
+    state.targetCanvas = null;
+    if (state.ui?.target) {
+      state.ui.target.style.display = "none";
+    }
+  }
+
+  function beginPreviewDrag(event) {
+    if (event.button !== 0) {
+      return;
+    }
+    if (!state.target || !getPrimaryImage()) {
+      return;
+    }
+    const rect = getViewportTargetRect();
+    if (!rect) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    state.drag.active = true;
+    state.drag.startX = event.clientX;
+    state.drag.startY = event.clientY;
+    state.drag.baseOffsetX = state.settings.offsetX;
+    state.drag.baseOffsetY = state.settings.offsetY;
+
+    if (state.ui?.image) {
+      state.ui.image.dataset.dragging = "1";
+    }
+  }
+
+  function updatePreviewDrag(event) {
+    if (!state.drag.active) {
+      return;
+    }
+
+    event.preventDefault();
+    const dx = event.clientX - state.drag.startX;
+    const dy = event.clientY - state.drag.startY;
+    state.settings.offsetX = clamp(state.drag.baseOffsetX + dx, -2000, 2000);
+    state.settings.offsetY = clamp(state.drag.baseOffsetY + dy, -2000, 2000);
+    renderPreview();
+  }
+
+  function endPreviewDrag() {
+    if (!state.drag.active) {
+      return;
+    }
+    state.drag.active = false;
+    if (state.ui?.image) {
+      delete state.ui.image.dataset.dragging;
+    }
+    persistSettings();
+  }
+
   function ensureOverlay() {
     if (state.ui?.overlay?.isConnected) {
       return state.ui;
@@ -356,6 +426,7 @@
 
     const image = document.createElement("div");
     image.id = "itd-redraw-image";
+    image.addEventListener("mousedown", beginPreviewDrag);
 
     const badge = document.createElement("div");
     badge.id = "itd-redraw-badge";
@@ -375,12 +446,22 @@
       return null;
     }
 
-    if (state.target.source === "canvas" && state.targetCanvas && state.targetCanvas.isConnected) {
+    if (state.target.boundToCanvas) {
+      if (!state.targetCanvas || !state.targetCanvas.isConnected || !isCanvasVisible(state.targetCanvas)) {
+        endPreviewDrag();
+        clearTarget();
+        return null;
+      }
       const rect = state.targetCanvas.getBoundingClientRect();
       state.target.pageLeft = rect.left + window.scrollX;
       state.target.pageTop = rect.top + window.scrollY;
       state.target.width = rect.width;
       state.target.height = rect.height;
+    }
+
+    if (state.target.width < 2 || state.target.height < 2) {
+      clearTarget();
+      return null;
     }
 
     return {
@@ -395,14 +476,16 @@
     if (!viewRect || viewRect.width < 2 || viewRect.height < 2) {
       return;
     }
+    const resolvedCanvas = canvasHint || resolveCanvasForRect(viewRect) || null;
     state.target = {
       pageLeft: viewRect.left + window.scrollX,
       pageTop: viewRect.top + window.scrollY,
       width: viewRect.width,
       height: viewRect.height,
-      source
+      source,
+      boundToCanvas: Boolean(source === "canvas" || resolvedCanvas)
     };
-    state.targetCanvas = canvasHint || resolveCanvasForRect(viewRect) || null;
+    state.targetCanvas = resolvedCanvas;
     renderPreview();
   }
 
@@ -438,6 +521,7 @@
     const targetRect = getViewportTargetRect();
 
     if (!targetRect) {
+      endPreviewDrag();
       ui.target.style.display = "none";
       return;
     }
@@ -456,6 +540,7 @@
     const previewImage = getPrimaryImage();
     if (!previewImage) {
       ui.image.style.display = "none";
+      ui.image.style.pointerEvents = "none";
       const canvasMeta = getCanvasMeta(state.targetCanvas);
       if (canvasMeta) {
         ui.badge.textContent = `Область ${Math.round(targetRect.width)}x${Math.round(targetRect.height)} CSS | canvas ${canvasMeta.width}x${canvasMeta.height}px`;
@@ -476,6 +561,7 @@
     );
 
     ui.image.style.display = "block";
+    ui.image.style.pointerEvents = "auto";
     ui.image.style.left = `${box.x}px`;
     ui.image.style.top = `${box.y}px`;
     ui.image.style.width = `${box.width}px`;
@@ -494,6 +580,16 @@
       ui.badge.textContent = `${state.settings.fitMode}/${state.settings.resampleMode} | src ${previewImage.width}x${previewImage.height} | canvas ${canvasMeta.width}x${canvasMeta.height} | px-scale ${scaleX}x${scaleY}${imagesLabel}`;
     } else {
       ui.badge.textContent = `Режим ${state.settings.fitMode}/${state.settings.resampleMode} | Область ${Math.round(targetRect.width)}x${Math.round(targetRect.height)} | ${sourceLabel}`;
+    }
+  }
+
+  function watchTargetLifecycle() {
+    if (!state.target || !state.target.boundToCanvas) {
+      return;
+    }
+    if (!state.targetCanvas || !state.targetCanvas.isConnected || !isCanvasVisible(state.targetCanvas)) {
+      clearTarget();
+      renderPreview();
     }
   }
 
@@ -1010,6 +1106,7 @@
   }
 
   function resetAll() {
+    endPreviewDrag();
     stopVideoLoop();
     if (state.images.length > 0) {
       releaseImages(state.images);
@@ -1212,6 +1309,10 @@
     true
   );
 
+  window.addEventListener("mousemove", updatePreviewDrag, true);
+  window.addEventListener("mouseup", endPreviewDrag, true);
+  window.addEventListener("blur", endPreviewDrag);
+
   loadSettingsFromStorage()
     .then((saved) => {
       state.settings = { ...state.settings, ...saved };
@@ -1220,6 +1321,8 @@
       }
     })
     .catch(() => {});
+
+  state.targetWatchTimer = window.setInterval(watchTargetLifecycle, 320);
 
   const onViewportChange = () => {
     if (state.target) {
