@@ -1292,7 +1292,102 @@ fragColor = vec4( result, 1.0 );
       state.activePanel = null;
     });
     
-    // TODO: Добавить функционал AI
+    // Загрузить сохранённые настройки
+    chrome.storage.local.get(['itdAiEndpoint', 'itdAiKey', 'itdAiModel'], (data) => {
+      if (data.itdAiEndpoint) {
+        panel.querySelector('#itd-ai-endpoint').value = data.itdAiEndpoint;
+      }
+      if (data.itdAiKey) {
+        panel.querySelector('#itd-ai-key').value = data.itdAiKey;
+      }
+      if (data.itdAiModel) {
+        panel.querySelector('#itd-ai-model').value = data.itdAiModel;
+      }
+    });
+    
+    // Кнопка генерации
+    const generateBtn = panel.querySelector('#itd-ai-generate');
+    generateBtn.addEventListener('click', async () => {
+      const endpoint = panel.querySelector('#itd-ai-endpoint').value.trim();
+      const apiKey = panel.querySelector('#itd-ai-key').value.trim();
+      const model = panel.querySelector('#itd-ai-model').value.trim();
+      const prompt = panel.querySelector('#itd-ai-prompt').value.trim();
+      const resultArea = panel.querySelector('#itd-ai-result');
+      
+      if (!endpoint || !apiKey || !model || !prompt) {
+        alert('Заполните все поля');
+        return;
+      }
+      
+      // Сохранить настройки
+      chrome.storage.local.set({
+        itdAiEndpoint: endpoint,
+        itdAiKey: apiKey,
+        itdAiModel: model
+      });
+      
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Генерация...';
+      resultArea.value = '';
+      
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{
+              role: 'user',
+              content: prompt
+            }],
+            temperature: 0.7,
+            max_tokens: 500
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content || 'Ошибка: пустой ответ';
+        resultArea.value = text;
+        
+      } catch (error) {
+        console.error('[ITD AI] Error:', error);
+        resultArea.value = `Ошибка: ${error.message}`;
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Сгенерировать';
+      }
+    });
+    
+    // Кнопка вставки
+    const insertBtn = panel.querySelector('#itd-ai-insert');
+    insertBtn.addEventListener('click', () => {
+      const text = panel.querySelector('#itd-ai-result').value;
+      if (!text) {
+        alert('Нет текста для вставки');
+        return;
+      }
+      
+      // Найти textarea для поста на странице
+      const postTextarea = document.querySelector('textarea[placeholder*="пост"], textarea[name*="text"], textarea[class*="post"]');
+      if (postTextarea) {
+        postTextarea.value = text;
+        postTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+        alert('Текст вставлен в пост!');
+      } else {
+        // Копировать в буфер обмена
+        navigator.clipboard.writeText(text).then(() => {
+          alert('Текст скопирован в буфер обмена!');
+        });
+      }
+    });
+    
     console.log("[ITD Floating Panel] AI panel setup");
   }
   
