@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ITD Banner Redraw Helper",
-  "version": "1.0.3",
-  "description": "Select an area, fit an image precisely, preview it, and apply to canvas.",
+  "version": "1.0.7",
+  "description": "Select an area, fit an image precisely, preview it, and apply to canvas. Auto-loading themes for итд.com.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -12,11 +12,28 @@
   "host_permissions": [
     "<all_urls>"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_title": "ITD Banner Redraw",
     "default_popup": "popup/popup.html"
   },
   "content_scripts": [
+    {
+      "matches": [
+        "https://xn--d1ah4a.com/*",
+        "http://xn--d1ah4a.com/*"
+      ],
+      "js": [
+        "floating-panel/floating-panel.js"
+      ],
+      "css": [
+        "floating-panel/floating-panel.css"
+      ],
+      "run_at": "document_end",
+      "all_frames": false
+    },
     {
       "matches": [
         "<all_urls>"
@@ -27,7 +44,8 @@
       "css": [
         "content/content.css"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ]
 }

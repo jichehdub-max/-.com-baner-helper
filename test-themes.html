@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITD Themes Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 ITD Themes Extension Test</h1>
+        <p>Эта страница поможет протестировать работу расширения ITD Themes.</p>
+        
+        <div class="test-section">
+            <h3>Статус расширения</h3>
+            <div id="extensionStatus" class="status warning">Проверка...</div>
+            <button onclick="checkExtension()">Проверить расширение</button>
+            <button onclick="forceLoadPanel()">Принудительно загрузить панель</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Тест тем</h3>
+            <button onclick="testTheme('blue')">Blue Theme</button>
+            <button onclick="testTheme('purple')">Purple Theme</button>
+            <button onclick="testTheme('default')">Default Theme</button>
+            <div id="themeStatus" class="status">Тема не применена</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Тест шейдеров</h3>
+            <button onclick="testShader()">Тест Plasma шейдера</button>
+            <button onclick="clearShader()">Очистить шейдер</button>
+            <div id="shaderStatus" class="status">Шейдер не активен</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Логи</h3>
+            <button onclick="clearLogs()">Очистить логи</button>
+            <button onclick="copyLogs()">Скопировать в буфер</button>
+            <div id="logs" class="log">Логи появятся здесь...</div>
+        </div>
+    </div>
+
+    <script>
+        let logs = [];
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            logs.push(logMessage);
+            console.log(logMessage);
+            updateLogsDisplay();
+        }
+        
+        function updateLogsDisplay() {
+            const logsDiv = document.getElementById('logs');
+            logsDiv.innerHTML = logs.join('\n');
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        function clearLogs() {
+            logs = [];
+            updateLogsDisplay();
+        }
+        
+        function copyLogs() {
+            navigator.clipboard.writeText(logs.join('\n')).then(() => {
+                log('Логи скопированы в буфер обмена');
+            });
+        }
+        
+        function updateStatus(elementId, message, type = 'warning') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+        
+        function checkExtension() {
+            log('Проверка расширения...');
+            
+            // Check if panel is loaded
+            const panelLoaded = !!window.__itdThemePanelLoaded;
+            const buttonExists = !!document.getElementById('itd-theme-btn');
+            const panelExists = !!document.getElementById('itd-theme-panel');
+            
+            log(`Panel loaded: ${panelLoaded}`);
+            log(`Button exists: ${buttonExists}`);
+            log(`Panel exists: ${panelExists}`);
+            
+            if (panelLoaded && buttonExists) {
+                updateStatus('extensionStatus', '✅ Расширение работает! Кнопка 🎨 должна быть видна', 'success');
+            } else if (panelLoaded) {
+                updateStatus('extensionStatus', '⚠️ Скрипт загружен, но UI не создан', 'warning');
+            } else {
+                updateStatus('extensionStatus', '❌ Расширение не загружено', 'error');
+            }
+        }
+        
+        function forceLoadPanel() {
+            log('Принудительная загрузка панели...');
+            
+            // This would normally be done by the popup, but we can simulate it
+            updateStatus('extensionStatus', 'ℹ️ Используйте кнопку "Загрузить панель" в popup расширения', 'warning');
+        }
+        
+        function testTheme(theme) {
+            log(`Применение темы: ${theme}`);
+            
+            // Apply theme directly
+            document.documentElement.setAttribute('data-itd-custom-theme', theme);
+            updateStatus('themeStatus', `✅ Тема ${theme} применена`, 'success');
+            
+            // Test CSS variables
+            const computedStyle = getComputedStyle(document.documentElement);
+            log(`CSS variables applied for theme: ${theme}`);
+        }
+        
+        function testShader() {
+            log('Тест шейдера...');
+            
+            // Check if shader canvas exists
+            const existingCanvas = document.getElementById('itd-shader-canvas');
+            if (existingCanvas) {
+                log('Шейдер уже активен');
+                updateStatus('shaderStatus', '✅ Шейдер активен', 'success');
+                return;
+            }
+            
+            // Create test shader canvas
+            const canvas = document.createElement('canvas');
+            canvas.id = 'itd-shader-canvas';
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.cssText = `
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                z-index: 999997 !important;
+                pointer-events: none !important;
+                opacity: 0.3 !important;
+                mix-blend-mode: screen !important;
+            `;
+            
+            document.body.appendChild(canvas);
+            
+            // Simple test pattern
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                gradient.addColorStop(0, 'rgba(255, 0, 255, 0.3)');
+                gradient.addColorStop(1, 'rgba(0, 255, 255, 0.3)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                updateStatus('shaderStatus', '✅ Тестовый шейдер активен', 'success');
+                log('Тестовый шейдер создан');
+            }
+        }
+        
+        function clearShader() {
+            const canvas = document.getElementById('itd-shader-canvas');
+            if (canvas) {
+                canvas.remove();
+                updateStatus('shaderStatus', 'Шейдер очищен', 'warning');
+                log('Шейдер очищен');
+            } else {
+                log('Шейдер не найден');
+            }
+        }
+        
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            log('Страница загружена');
+            setTimeout(checkExtension, 1000);
+        });
+        
+        // Listen for extension messages
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'ITD_PANEL_STATUS') {
+                log(`Получено сообщение от расширения: ${JSON.stringify(event.data)}`);
+            }
+        });
+    </script>
+</body>
+</html>

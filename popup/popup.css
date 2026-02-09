@@ -172,3 +172,130 @@ input[type="range"] {
   line-height: 16px;
   color: var(--muted);
 }
+
+/* Theme Section Styles */
+.theme-section,
+.shader-section {
+  background: linear-gradient(135deg, var(--panel) 0%, #1a2332 100%);
+  border-color: #3a4d6a;
+}
+
+.section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #a8c5ff;
+}
+
+.theme-creator {
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.theme-creator summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.theme-creator summary:hover {
+  color: var(--text);
+}
+
+.theme-form {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+input[type="color"] {
+  height: 36px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.btn-sm {
+  font-size: 11px;
+  padding: 6px 8px;
+}
+
+.shader-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.shader-quick-test {
+  margin-bottom: 10px;
+}
+
+#testSystemBtn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #3b82f6;
+  font-weight: 600;
+}
+
+#testSystemBtn:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+}
+
+#quickTestShaderBtn {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border-color: #a78bfa;
+  font-weight: 600;
+}
+
+#quickTestShaderBtn:hover {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+}
+
+.btn-debug {
+  font-size: 11px;
+  padding: 6px 10px;
+  background: #1f2937;
+  border-color: #374151;
+  color: #9ca3af;
+}
+
+.btn-debug:hover {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.debug-buttons {
+  display: block;
+  margin-top: 10px;
+}
+
+.debug-buttons .btn-debug {
+  width: 100%;
+}
+
+#shaderCodeInput {
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  min-height: 120px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.theme-section,
+.shader-section {
+  animation: fadeIn 0.3s ease;
+}

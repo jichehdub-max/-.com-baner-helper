@@ -3,92 +3,75 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ITD Banner Redraw</title>
-  <link rel="stylesheet" href="popup.css">
+  <title>ITD Helper</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      width: 320px;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    
+    .container {
+      text-align: center;
+    }
+    
+    .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    p {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.95;
+      margin-bottom: 8px;
+    }
+    
+    .hint {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .version {
+      font-size: 11px;
+      opacity: 0.6;
+      margin-top: 12px;
+    }
+  </style>
 </head>
 <body>
-  <main class="app">
-    <h1>ITD Banner Redraw</h1>
-    <p class="subtitle">Точное вписывание изображения в баннер itd.com</p>
-
-    <section class="block">
-      <button id="detectCanvasBtn" class="btn btn-primary">Найти canvas (800x267)</button>
-      <button id="selectAreaBtn" class="btn">Выбрать область вручную</button>
-    </section>
-
-    <section class="block">
-      <label class="label" for="imageInput">Изображение</label>
-      <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" multiple>
-      <p id="imageMeta" class="hint">Файл не выбран.</p>
-    </section>
-
-    <section class="block">
-      <label class="label" for="fitMode">Режим вписывания</label>
-      <select id="fitMode">
-        <option value="cover">Cover (заполнить)</option>
-        <option value="contain">Contain (вместить)</option>
-        <option value="stretch">Stretch (растянуть)</option>
-      </select>
-    </section>
-
-    <section class="block">
-      <label class="label" for="resampleMode">Цвет и пиксели</label>
-      <select id="resampleMode">
-        <option value="pixel">Pixel Perfect (без сглаживания)</option>
-        <option value="smooth">Smooth (мягкое сглаживание)</option>
-      </select>
-    </section>
-
-    <section class="block grid">
-      <label for="scaleRange">Масштаб <span id="scaleValue">100%</span></label>
-      <input id="scaleRange" type="range" min="20" max="300" step="1" value="100">
-
-      <label for="offsetXRange">Сдвиг X <span id="offsetXValue">0px</span></label>
-      <input id="offsetXRange" type="range" min="-400" max="400" step="1" value="0">
-
-      <label for="offsetYRange">Сдвиг Y <span id="offsetYValue">0px</span></label>
-      <input id="offsetYRange" type="range" min="-300" max="300" step="1" value="0">
-
-      <label for="opacityRange">Прозрачность <span id="opacityValue">100%</span></label>
-      <input id="opacityRange" type="range" min="1" max="100" step="1" value="100">
-    </section>
-
-    <section class="block">
-      <label class="checkbox">
-        <input id="autoPasteApply" type="checkbox" checked>
-        <span>Ctrl+V сразу применяет в canvas</span>
-      </label>
-      <p class="hint">Вставка работает прямо на странице итд.com из буфера обмена.</p>
-    </section>
-
-    <section class="block grid">
-      <label class="label" for="aiEndpointInput">AI API Endpoint</label>
-      <input id="aiEndpointInput" type="text" placeholder="https://.../v1/chat/completions" spellcheck="false">
-
-      <label class="label" for="aiApiKeyInput">AI API Key</label>
-      <input id="aiApiKeyInput" type="password" placeholder="sk-..." spellcheck="false">
-
-      <label class="label" for="aiModelInput">AI Model</label>
-      <input id="aiModelInput" type="text" placeholder="gpt-4o-mini" spellcheck="false">
-
-      <label class="label" for="aiPromptInput">Тема поста</label>
-      <textarea id="aiPromptInput" rows="3" placeholder="О чем написать пост?"></textarea>
-
-      <div class="actions ai-actions">
-        <button id="aiGenerateBtn" class="btn btn-primary">Сгенерировать и вставить</button>
-      </div>
-      <p class="hint">Генерация автоматически вставляет текст в поле "Что у вас нового?".</p>
-    </section>
-
-    <section class="block actions">
-      <button id="applyBtn" class="btn btn-primary">Применить в canvas</button>
-      <button id="exportBtn" class="btn">Скачать PNG (fallback)</button>
-      <button id="resetBtn" class="btn btn-danger">Сброс</button>
-    </section>
-
-    <p id="status" class="status">Открой окно рисования на сайте, затем нажми "Найти canvas".</p>
-  </main>
-
-  <script src="popup.js"></script>
+  <div class="container">
+    <div class="icon">🎨</div>
+    <h1>ITD Helper</h1>
+    <p>Интерфейс плагина появился в окне сайта итд.com</p>
+    <p>Ищите плавающую панель кнопок справа снизу</p>
+    <div class="hint">
+      Откройте итд.com чтобы увидеть панель с функциями: темы, AI генератор, баннер хелпер, настройки и debug
+    </div>
+    <div class="version">v1.0.7</div>
+  </div>
 </body>
 </html>

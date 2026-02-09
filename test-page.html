@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест тем ITD</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0a0a0a;
+            color: #eee;
+        }
+        
+        /* Имитация структуры итд.com */
+        div.layout {
+            min-height: 100vh;
+            padding: 20px;
+            background: #1a1a2e;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #16213e;
+            border-radius: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #0f3460;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1a4d7a;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f3460;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .info {
+            color: #4ecca3;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <!-- Имитация структуры итд.com -->
+    <div class="layout">
+        <h1>🎨 Тест системы тем ITD (div.layout)</h1>
+        
+        <div class="test-section">
+            <h2>Проверка загрузки</h2>
+            <button onclick="checkSystem()">Проверить систему</button>
+            <button onclick="checkThemes()">Проверить темы</button>
+            <button onclick="checkShader()">Проверить шейдер</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Тестовые элементы</h2>
+            <p>Эти элементы должны менять цвет при смене темы:</p>
+            <div id="itd-redraw-target" style="width: 300px; height: 100px; border: 2px solid; padding: 10px; margin: 10px 0;">
+                Тестовая область (itd-redraw-target)
+            </div>
+            <div id="itd-redraw-badge" style="padding: 10px; margin: 10px 0; border: 1px solid; display: inline-block;">
+                Тестовый бейдж (itd-redraw-badge)
+            </div>
+            <div id="itd-redraw-toast" style="padding: 10px; margin: 10px 0; border: 1px solid; display: inline-block;">
+                Тестовое уведомление (itd-redraw-toast)
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Управление темами</h2>
+            <button onclick="setTheme('default')">Default</button>
+            <button onclick="setTheme('dark')">Dark Purple</button>
+            <button onclick="setTheme('neon')">Neon Cyan</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Управление шейдером</h2>
+            <button onclick="applyPlasmaShader()">Plasma Wave</button>
+            <button onclick="applyTunnelShader()">Tunnel Effect</button>
+            <button onclick="clearShader()">Очистить шейдер</button>
+        </div>
+
+        <div id="status" class="test-section">
+            <strong>Статус:</strong> Откройте консоль (F12) для подробных логов
+        </div>
+    </div>
+
+    <script>
+        function log(message, isError = false) {
+            const status = document.getElementById('status');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = isError ? 'error' : 'info';
+            status.innerHTML += `\n[${timestamp}] <span class="${className}">${message}</span>`;
+            console.log(`[Test Page] ${message}`);
+        }
+
+        function checkSystem() {
+            log('Проверка системы тем...');
+            if (window.itdThemeSystem) {
+                log('✓ window.itdThemeSystem найден');
+                log(`Инициализирован: ${window.itdThemeSystem.initialized}`);
+                log(`Активная тема: ${window.itdThemeSystem.activeTheme}`);
+            } else {
+                log('✗ window.itdThemeSystem не найден', true);
+                log('Убедитесь что расширение загружено', true);
+            }
+        }
+
+        function checkThemes() {
+            if (!window.itdThemeSystem) {
+                log('✗ Система тем не загружена', true);
+                return;
+            }
+            const themes = window.itdThemeSystem.getThemes();
+            log(`Доступные темы: ${Object.keys(themes).join(', ')}`);
+            
+            const style = document.getElementById('itd-custom-theme-style');
+            if (style) {
+                log('✓ Стили темы применены');
+                log(`Тема: ${style.getAttribute('data-theme')}`);
+            } else {
+                log('✗ Стили темы не найдены', true);
+            }
+        }
+
+        function checkShader() {
+            const canvas = document.getElementById('itd-shader-canvas');
+            if (canvas) {
+                log('✓ Шейдер canvas найден');
+                log(`Размер: ${canvas.width}x${canvas.height}`);
+            } else {
+                log('Шейдер не активен');
+            }
+        }
+
+        function setTheme(themeId) {
+            if (!window.itdThemeSystem) {
+                log('✗ Система тем не загружена', true);
+                return;
+            }
+            log(`Применение темы: ${themeId}`);
+            const success = window.itdThemeSystem.setActiveTheme(themeId);
+            if (success) {
+                log(`✓ Тема ${themeId} применена`);
+            } else {
+                log(`✗ Не удалось применить тему ${themeId}`, true);
+            }
+        }
+
+        function applyPlasmaShader() {
+            if (!window.itdThemeSystem) {
+                log('✗ Система тем не загружена', true);
+                return;
+            }
+            const shader = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+  vec3 col = 0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0, 2, 4));
+  fragColor = vec4(col, 1.0);
+}`;
+            log('Применение Plasma Wave шейдера...');
+            window.itdThemeSystem.setShader(shader);
+            log('✓ Шейдер применен');
+        }
+
+        function applyTunnelShader() {
+            if (!window.itdThemeSystem) {
+                log('✗ Система тем не загружена', true);
+                return;
+            }
+            const shader = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
+  float d = length(uv);
+  float a = atan(uv.y, uv.x);
+  vec2 p = vec2(a / 3.14159, 1.0 / d);
+  p.y += iTime * 0.5;
+  vec3 col = 0.5 + 0.5 * cos(p.y * 3.0 + vec3(0, 2, 4));
+  col *= smoothstep(0.1, 0.0, abs(fract(p.x * 8.0) - 0.5));
+  fragColor = vec4(col, 1.0);
+}`;
+            log('Применение Tunnel Effect шейдера...');
+            window.itdThemeSystem.setShader(shader);
+            log('✓ Шейдер применен');
+        }
+
+        function clearShader() {
+            if (!window.itdThemeSystem) {
+                log('✗ Система тем не загружена', true);
+                return;
+            }
+            log('Очистка шейдера...');
+            window.itdThemeSystem.clearShader();
+            log('✓ Шейдер очищен');
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('=== Автоматическая проверка ===');
+                checkSystem();
+                checkThemes();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
