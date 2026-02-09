@@ -1413,25 +1413,32 @@ fragColor = vec4( result, 1.0 );
     // Найти canvas
     const detectBtn = panel.querySelector('#itd-detect-canvas');
     detectBtn.addEventListener('click', () => {
-      const canvases = document.querySelectorAll('canvas');
-      if (canvases.length === 0) {
-        alert('Canvas не найден на странице');
-        return;
-      }
+      // Сначала ищем canvas с классом drawing-canvas (специфично для итд.com)
+      const preferred = Array.from(document.querySelectorAll('canvas.drawing-canvas'))
+        .filter(c => c.offsetParent !== null);
       
-      // Найти самый большой canvas
-      let maxArea = 0;
-      canvases.forEach(canvas => {
-        const area = canvas.width * canvas.height;
-        if (area > maxArea) {
-          maxArea = area;
-          selectedCanvas = canvas;
+      if (preferred.length > 0) {
+        // Выбрать самый большой
+        preferred.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+        selectedCanvas = preferred[0];
+      } else {
+        // Fallback: искать любой видимый canvas
+        const canvases = Array.from(document.querySelectorAll('canvas'))
+          .filter(c => c.offsetParent !== null);
+        
+        if (canvases.length === 0) {
+          alert('Canvas не найден на странице');
+          return;
         }
-      });
+        
+        canvases.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+        selectedCanvas = canvases[0];
+      }
       
       if (selectedCanvas) {
         selectedCanvas.style.outline = '3px solid #00ff00';
-        alert(`Canvas найден: ${selectedCanvas.width}x${selectedCanvas.height}`);
+        const rect = selectedCanvas.getBoundingClientRect();
+        alert(`Canvas найден: CSS ${Math.round(rect.width)}x${Math.round(rect.height)} | px ${selectedCanvas.width}x${selectedCanvas.height}`);
         console.log('[ITD Banner] Canvas selected:', selectedCanvas);
       }
     });
