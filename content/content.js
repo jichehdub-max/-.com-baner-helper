@@ -1590,6 +1590,44 @@
     return { ok: false, message: "Неизвестная команда." };
   }
 
+  // Слушать сообщения от floating-panel.js через window.postMessage
+  window.addEventListener('message', async (event) => {
+    // Проверить что сообщение от нашего расширения
+    if (event.source !== window) {
+      return;
+    }
+    
+    const message = event.data;
+    if (!message || !message.type || !message.type.startsWith('ITD_REDRAW_')) {
+      return;
+    }
+    
+    // Обработать сообщение
+    try {
+      const result = await handleMessage(message);
+      
+      // Отправить ответ обратно
+      if (message.messageId) {
+        window.postMessage({
+          messageId: message.messageId,
+          isResponse: true,
+          response: result
+        }, '*');
+      }
+    } catch (err) {
+      if (message.messageId) {
+        window.postMessage({
+          messageId: message.messageId,
+          isResponse: true,
+          response: {
+            ok: false,
+            message: err?.message || "Внутренняя ошибка."
+          }
+        }, '*');
+      }
+    }
+  });
+
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handleMessage(message)
       .then((result) => sendResponse(result))

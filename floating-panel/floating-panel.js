@@ -1407,19 +1407,37 @@ fragColor = vec4( result, 1.0 );
       state.activePanel = null;
     });
     
-    // Отправить сообщение в content script
-    function sendMessage(message) {
+    // Отправить сообщение в content script через window.postMessage
+    function sendToContentScript(message) {
       return new Promise((resolve) => {
-        chrome.runtime.sendMessage(message, (response) => {
-          resolve(response || { ok: false, message: 'Нет ответа' });
-        });
+        const messageId = 'itd_' + Date.now() + '_' + Math.random();
+        message.messageId = messageId;
+        
+        // Слушать ответ
+        const responseHandler = (event) => {
+          if (event.data && event.data.messageId === messageId && event.data.isResponse) {
+            window.removeEventListener('message', responseHandler);
+            resolve(event.data.response || { ok: false, message: 'Нет ответа' });
+          }
+        };
+        
+        window.addEventListener('message', responseHandler);
+        
+        // Отправить сообщение
+        window.postMessage(message, '*');
+        
+        // Таймаут на случай если ответа не будет
+        setTimeout(() => {
+          window.removeEventListener('message', responseHandler);
+          resolve({ ok: false, message: 'Таймаут ожидания ответа' });
+        }, 5000);
       });
     }
     
     // Найти canvas
     const detectBtn = panel.querySelector('#itd-detect-canvas');
     detectBtn.addEventListener('click', async () => {
-      const resp = await sendMessage({ type: 'ITD_REDRAW_DETECT_CANVAS' });
+      const resp = await sendToContentScript({ type: 'ITD_REDRAW_DETECT_CANVAS' });
       if (!resp.ok) {
         alert(resp.message || 'Canvas не найден');
         return;
@@ -1437,7 +1455,7 @@ fragColor = vec4( result, 1.0 );
     // Выбрать область
     const selectBtn = panel.querySelector('#itd-select-area');
     selectBtn.addEventListener('click', async () => {
-      const resp = await sendMessage({ type: 'ITD_REDRAW_SELECT_AREA' });
+      const resp = await sendToContentScript({ type: 'ITD_REDRAW_SELECT_AREA' });
       if (!resp.ok) {
         alert(resp.message || 'Не удалось запустить выделение');
         return;
@@ -1464,13 +1482,19 @@ fragColor = vec4( result, 1.0 );
       }));
       
       // Отправить в content script
-      const resp = await sendMessage({
-        type: 'ITD_REDRAW_SET_IMAGES',
-        payload: { dataUrls }
+      const resp = await sendToContentScript({
+        type: files.length === 1 ? 'ITD_REDRAW_SET_IMAGE' : 'ITD_REDRAW_SET_IMAGES',
+        payload: files.length === 1 ? { dataUrl: dataUrls[0] } : { dataUrls }
       });
       
       if (resp.ok) {
-        imageMeta.textContent = `${files.length} файл(ов) загружено`;
+        if (files.length === 1 && resp.image) {
+          imageMeta.textContent = `${files[0].name} | ${resp.image.width}x${resp.image.height}`;
+        } else if (resp.imagesCount && resp.firstImage) {
+          imageMeta.textContent = `${resp.imagesCount} файлов | первый: ${resp.firstImage.width}x${resp.firstImage.height}`;
+        } else {
+          imageMeta.textContent = `${files.length} файл(ов) загружено`;
+        }
         console.log('[ITD Banner] Images loaded:', files.length);
       } else {
         imageMeta.textContent = resp.message || 'Ошибка загрузки';
@@ -1494,7 +1518,7 @@ fragColor = vec4( result, 1.0 );
         offsetY: parseInt(offsetYSlider.value)
       };
       
-      sendMessage({
+      sendToContentScript({
         type: 'ITD_REDRAW_UPDATE_SETTINGS',
         payload: settings
       });
@@ -1520,7 +1544,7 @@ fragColor = vec4( result, 1.0 );
     // Применить баннер
     const applyBtn = panel.querySelector('#itd-apply-banner');
     applyBtn.addEventListener('click', async () => {
-      const resp = await sendMessage({ type: 'ITD_REDRAW_APPLY_CANVAS' });
+      const resp = await sendToContentScript({ type: 'ITD_REDRAW_APPLY_CANVAS' });
       if (!resp.ok) {
         alert(resp.message || 'Не удалось применить');
         return;
@@ -1532,7 +1556,7 @@ fragColor = vec4( result, 1.0 );
     // Экспорт PNG
     const exportBtn = panel.querySelector('#itd-export-banner');
     exportBtn.addEventListener('click', async () => {
-      const resp = await sendMessage({ type: 'ITD_REDRAW_EXPORT_PNG' });
+      const resp = await sendToContentScript({ type: 'ITD_REDRAW_EXPORT_PNG' });
       if (!resp.ok) {
         alert(resp.message || 'Не удалось экспортировать');
         return;
@@ -1541,7 +1565,7 @@ fragColor = vec4( result, 1.0 );
       console.log('[ITD Banner] Exported PNG');
     });
     
-    console.log("[ITD Floating Panel] Banner panel setup (using content.js)");
+    console.log("[ITD Floating Panel] Banner panel setup (using window.postMessage)");
   }
   
   // Настройка панели настроек
