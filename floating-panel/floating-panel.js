@@ -500,8 +500,12 @@ console.log("[ITD Floating Panel] Script starting...");
     const tabContents = panel.querySelectorAll('.itd-tab-content');
     
     tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const tabName = tab.dataset.tab;
+        
+        console.log('[ITD] Switching to tab:', tabName);
         
         // Убрать активность со всех вкладок
         tabs.forEach(t => t.classList.remove('active'));
@@ -510,7 +514,10 @@ console.log("[ITD Floating Panel] Script starting...");
         // Активировать выбранную вкладку
         tab.classList.add('active');
         const content = panel.querySelector(`[data-tab-content="${tabName}"]`);
-        if (content) content.classList.add('active');
+        if (content) {
+          content.classList.add('active');
+          console.log('[ITD] Tab activated:', tabName);
+        }
       });
     });
     
