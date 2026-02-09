@@ -1407,7 +1407,154 @@ fragColor = vec4( result, 1.0 );
       state.activePanel = null;
     });
     
-    // TODO: Добавить функционал баннера
+    let selectedCanvas = null;
+    let uploadedImage = null;
+    
+    // Найти canvas
+    const detectBtn = panel.querySelector('#itd-detect-canvas');
+    detectBtn.addEventListener('click', () => {
+      const canvases = document.querySelectorAll('canvas');
+      if (canvases.length === 0) {
+        alert('Canvas не найден на странице');
+        return;
+      }
+      
+      // Найти самый большой canvas
+      let maxArea = 0;
+      canvases.forEach(canvas => {
+        const area = canvas.width * canvas.height;
+        if (area > maxArea) {
+          maxArea = area;
+          selectedCanvas = canvas;
+        }
+      });
+      
+      if (selectedCanvas) {
+        selectedCanvas.style.outline = '3px solid #00ff00';
+        alert(`Canvas найден: ${selectedCanvas.width}x${selectedCanvas.height}`);
+        console.log('[ITD Banner] Canvas selected:', selectedCanvas);
+      }
+    });
+    
+    // Загрузить изображение
+    const imageInput = panel.querySelector('#itd-image-input');
+    const imageMeta = panel.querySelector('#itd-image-meta');
+    
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          uploadedImage = img;
+          imageMeta.textContent = `${file.name} (${img.width}x${img.height})`;
+          console.log('[ITD Banner] Image loaded:', img.width, img.height);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Обновить значения слайдеров
+    const scaleSlider = panel.querySelector('#itd-scale');
+    const scaleValue = panel.querySelector('#itd-scale-value');
+    const offsetXSlider = panel.querySelector('#itd-offset-x');
+    const offsetXValue = panel.querySelector('#itd-offset-x-value');
+    const offsetYSlider = panel.querySelector('#itd-offset-y');
+    const offsetYValue = panel.querySelector('#itd-offset-y-value');
+    
+    scaleSlider.addEventListener('input', () => {
+      scaleValue.textContent = scaleSlider.value + '%';
+    });
+    
+    offsetXSlider.addEventListener('input', () => {
+      offsetXValue.textContent = offsetXSlider.value + 'px';
+    });
+    
+    offsetYSlider.addEventListener('input', () => {
+      offsetYValue.textContent = offsetYSlider.value + 'px';
+    });
+    
+    // Применить баннер
+    const applyBtn = panel.querySelector('#itd-apply-banner');
+    applyBtn.addEventListener('click', () => {
+      if (!selectedCanvas) {
+        alert('Сначала найдите canvas');
+        return;
+      }
+      
+      if (!uploadedImage) {
+        alert('Сначала загрузите изображение');
+        return;
+      }
+      
+      const ctx = selectedCanvas.getContext('2d');
+      const fitMode = panel.querySelector('#itd-fit-mode').value;
+      const scale = parseFloat(scaleSlider.value) / 100;
+      const offsetX = parseInt(offsetXSlider.value);
+      const offsetY = parseInt(offsetYSlider.value);
+      
+      // Очистить canvas
+      ctx.clearRect(0, 0, selectedCanvas.width, selectedCanvas.height);
+      
+      // Вычислить размеры
+      let drawWidth, drawHeight, drawX, drawY;
+      
+      if (fitMode === 'cover') {
+        const canvasRatio = selectedCanvas.width / selectedCanvas.height;
+        const imageRatio = uploadedImage.width / uploadedImage.height;
+        
+        if (imageRatio > canvasRatio) {
+          drawHeight = selectedCanvas.height * scale;
+          drawWidth = drawHeight * imageRatio;
+        } else {
+          drawWidth = selectedCanvas.width * scale;
+          drawHeight = drawWidth / imageRatio;
+        }
+      } else if (fitMode === 'contain') {
+        const canvasRatio = selectedCanvas.width / selectedCanvas.height;
+        const imageRatio = uploadedImage.width / uploadedImage.height;
+        
+        if (imageRatio > canvasRatio) {
+          drawWidth = selectedCanvas.width * scale;
+          drawHeight = drawWidth / imageRatio;
+        } else {
+          drawHeight = selectedCanvas.height * scale;
+          drawWidth = drawHeight * imageRatio;
+        }
+      } else { // stretch
+        drawWidth = selectedCanvas.width * scale;
+        drawHeight = selectedCanvas.height * scale;
+      }
+      
+      drawX = (selectedCanvas.width - drawWidth) / 2 + offsetX;
+      drawY = (selectedCanvas.height - drawHeight) / 2 + offsetY;
+      
+      ctx.drawImage(uploadedImage, drawX, drawY, drawWidth, drawHeight);
+      console.log('[ITD Banner] Image applied');
+    });
+    
+    // Экспорт PNG
+    const exportBtn = panel.querySelector('#itd-export-banner');
+    exportBtn.addEventListener('click', () => {
+      if (!selectedCanvas) {
+        alert('Сначала найдите canvas');
+        return;
+      }
+      
+      selectedCanvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `banner-${Date.now()}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        console.log('[ITD Banner] Exported');
+      });
+    });
+    
     console.log("[ITD Floating Panel] Banner panel setup");
   }
   
