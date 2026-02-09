@@ -267,9 +267,9 @@ console.log("[ITD Floating Panel] Script starting...");
             <label>Примеры шейдеров:</label>
             <select id="itd-shader-example">
               <option value="">-- Выбрать --</option>
-              <option value="darkhole">Dark Hole</option>
+              <option value="darkhole">The Big Bang</option>
               <option value="stars">Fractal Pyramid</option>
-              <option value="sky">Sky</option>
+              <option value="sky">Realistic Clouds</option>
             </select>
           </div>
           
@@ -573,38 +573,122 @@ console.log("[ITD Floating Panel] Script starting...");
     
     // Примеры шейдеров
     const shaderExamples = {
-      darkhole: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
-  float d = length(uv);
-  float a = atan(uv.y, uv.x);
-  
-  // Вращающаяся чёрная дыра
-  float spiral = sin(a * 5.0 - iTime * 2.0 + d * 10.0) * 0.5 + 0.5;
-  float hole = smoothstep(0.3, 0.0, d);
-  
-  // Цветные кольца
-  vec3 col = vec3(0.0);
-  col += vec3(0.5, 0.2, 0.8) * spiral * (1.0 - hole);
-  col += vec3(0.2, 0.5, 1.0) * (1.0 - smoothstep(0.0, 0.5, d));
-  col *= 1.0 - hole * 0.9;
-  
-  fragColor = vec4(col, 1.0);
+      darkhole: `// The Big Bang - https://www.shadertoy.com/view/MdXSzS
+void mainImage( out vec4 fragColor, in vec2 fragCoord ){
+vec2 uv = (fragCoord.xy / iResolution.xy) - .5;
+float t = iTime * .1 + ((.25 + .05 * sin(iTime * .1))/(length(uv.xy) + .07)) * 2.2;
+float si = sin(t);
+float co = cos(t);
+mat2 ma = mat2(co, si, -si, co);
+float v1, v2, v3;
+v1 = v2 = v3 = 0.0;
+float s = 0.0;
+for (int i = 0; i < 90; i++){
+vec3 p = s * vec3(uv, 0.0);
+p.xy *= ma;
+p += vec3(.22, .3, s - 1.5 - sin(iTime * .13) * .1);
+for (int i = 0; i < 8; i++) p = abs(p) / dot(p,p) - 0.659;
+v1 += dot(p,p) * .0015 * (1.8 + sin(length(uv.xy * 13.0) + .5  - iTime * .2));
+v2 += dot(p,p) * .0013 * (1.5 + sin(length(uv.xy * 14.5) + 1.2 - iTime * .3));
+v3 += length(p.xy*10.) * .0003;
+s  += .035;
+}
+float len = length(uv);
+v1 *= smoothstep(.7, .0, len);
+v2 *= smoothstep(.5, .0, len);
+v3 *= smoothstep(.9, .0, len);
+vec3 col = vec3( v3 * (1.5 + sin(iTime * .2) * .4),(v1 + v3) * .3,v2) + smoothstep(0.2, .0, len) * .85 + smoothstep(.0, .6, v3) * .3;
+fragColor=vec4(min(pow(abs(col), vec3(1.2)), 1.0), 1.0);
 }`,
       stars: `vec3 palette(float d){return mix(vec3(0.2,0.7,0.9),vec3(1.,0.,1.),d);}vec2 rotate(vec2 p,float a){float c = cos(a);float s = sin(a);return p*mat2(c,s,-s,c);}float map(vec3 p){for( int i = 0; i<8; ++i){float t = iTime*0.2;p.xz =rotate(p.xz,t);p.xy =rotate(p.xy,t*1.89);p.xz = abs(p.xz);p.xz-=.5;}return dot(sign(p),p)/5.;}vec4 rm (vec3 ro, vec3 rd){float t = 0.;vec3 col = vec3(0.);float d;for(float i =0.; i<64.; i++){vec3 p = ro + rd*t;d = map(p)*.5;if(d<0.02){break;}if(d>100.){break;}col+=palette(length(p)*.1)/(400.*(d));t+=d;}return vec4(col,1./(d*100.));}void mainImage( out vec4 fragColor, in vec2 fragCoord ){vec2 uv = (fragCoord-(iResolution.xy/2.))/iResolution.x;vec3 ro = vec3(0.,0.,-50.);ro.xz = rotate(ro.xz,iTime);vec3 cf = normalize(-ro);vec3 cs = normalize(cross(cf,vec3(0.,1.,0.)));vec3 cu = normalize(cross(cf,cs));vec3 uuv = ro+cf*3. + uv.x*cs + uv.y*cu;vec3 rd = normalize(uuv-ro);vec4 col = rm(ro,rd);fragColor = col;}`,
-      sky: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  vec2 uv = fragCoord / iResolution.xy;
-  
-  // Градиент неба
-  vec3 topColor = vec3(0.1, 0.2, 0.5);
-  vec3 bottomColor = vec3(0.5, 0.3, 0.6);
-  vec3 col = mix(bottomColor, topColor, uv.y);
-  
-  // Облака
-  float clouds = sin(uv.x * 10.0 + iTime * 0.5) * 0.5 + 0.5;
-  clouds *= sin(uv.y * 8.0 + iTime * 0.3) * 0.5 + 0.5;
-  col += vec3(clouds * 0.3);
-  
-  fragColor = vec4(col, 1.0);
+      sky: `const float cloudscale = 1.1;
+const float speed = 0.03;
+const float clouddark = 0.5;
+const float cloudlight = 0.3;
+const float cloudcover = 0.2;
+const float cloudalpha = 8.0;
+const float skytint = 0.5;
+const vec3 skycolour1 = vec3(0.2, 0.4, 0.6);
+const vec3 skycolour2 = vec3(0.4, 0.7, 1.0);
+const mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+vec2 hash( vec2 p ) {
+p = vec2(dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)));
+return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+}
+float noise( in vec2 p ) {
+const float K1 = 0.366025404;
+const float K2 = 0.211324865;
+vec2 i = floor(p + (p.x+p.y)*K1);
+vec2 a = p - i + (i.x+i.y)*K2;
+vec2 o = (a.x>a.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
+vec2 b = a - o + K2;
+vec2 c = a - 1.0 + 2.0*K2;
+vec3 h = max(0.5-vec3(dot(a,a), dot(b,b), dot(c,c) ), 0.0 );
+vec3 n = h*h*h*h*vec3( dot(a,hash(i+0.0)), dot(b,hash(i+o)), dot(c,hash(i+1.0)));
+return dot(n, vec3(70.0));
+}
+float fbm(vec2 n) {
+float total = 0.0, amplitude = 0.1;
+for (int i = 0; i < 7; i++) {
+total += noise(n) * amplitude;
+n = m * n;
+amplitude *= 0.4;
+}
+return total;
+}
+void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
+vec2 p = fragCoord.xy / iResolution.xy;
+vec2 uv = p*vec2(iResolution.x/iResolution.y,1.0);
+float time = iTime * speed;
+float q = fbm(uv * cloudscale * 0.5);
+float r = 0.0;
+uv *= cloudscale;
+uv -= q - time;
+float weight = 0.8;
+for (int i=0; i<8; i++){
+r += abs(weight*noise( uv ));
+uv = m*uv + time;
+weight *= 0.7;
+}
+float f = 0.0;
+uv = p*vec2(iResolution.x/iResolution.y,1.0);
+uv *= cloudscale;
+uv -= q - time;
+weight = 0.7;
+for (int i=0; i<8; i++){
+f += weight*noise( uv );
+uv = m*uv + time;
+weight *= 0.6;
+}
+f *= r + f;
+float c = 0.0;
+time = iTime * speed * 2.0;
+uv = p*vec2(iResolution.x/iResolution.y,1.0);
+uv *= cloudscale*2.0;
+uv -= q - time;
+weight = 0.4;
+for (int i=0; i<7; i++){
+c += weight*noise( uv );
+uv = m*uv + time;
+weight *= 0.6;
+}
+float c1 = 0.0;
+time = iTime * speed * 3.0;
+uv = p*vec2(iResolution.x/iResolution.y,1.0);
+uv *= cloudscale*3.0;
+uv -= q - time;
+weight = 0.4;
+for (int i=0; i<7; i++){
+c1 += abs(weight*noise( uv ));
+uv = m*uv + time;
+weight *= 0.6;
+}
+c += c1;
+vec3 skycolour = mix(skycolour2, skycolour1, p.y);
+vec3 cloudcolour = vec3(1.1, 1.1, 0.9) * clamp((clouddark + cloudlight*c), 0.0, 1.0);
+f = cloudcover + cloudalpha*f*r;
+vec3 result = mix(skycolour, clamp(skytint * skycolour + cloudcolour, 0.0, 1.0), clamp(f + c, 0.0, 1.0));
+fragColor = vec4( result, 1.0 );
 }`
     };
     

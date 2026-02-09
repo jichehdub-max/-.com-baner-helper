@@ -6,3 +6,16 @@ desktop.ini
 *.zip
 *.crx
 *.xpi
+
+# IDE and editor configs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Personal configs
+.env
+.env.local
+config.local.js
+settings.local.json
