@@ -325,7 +325,8 @@ console.log("[ITD Floating Panel] Script starting...");
         
         <div class="itd-section">
           <label>Модель:</label>
-          <input type="text" id="itd-ai-model" placeholder="openai-gpt-oss-20b">
+          <input type="text" id="itd-ai-model" value="openai-gpt-oss-20b" readonly disabled style="opacity: 0.6; cursor: not-allowed;">
+          <p class="itd-hint">Используется бесплатная модель openai-gpt-oss-20b</p>
         </div>
         
         <div class="itd-section">
@@ -1300,16 +1301,15 @@ fragColor = vec4( result, 1.0 );
     });
     
     // Загрузить сохранённые настройки
-    chrome.storage.local.get(['itdAiEndpoint', 'itdAiKey', 'itdAiModel'], (data) => {
+    chrome.storage.local.get(['itdAiEndpoint', 'itdAiKey'], (data) => {
       if (data.itdAiEndpoint) {
         panel.querySelector('#itd-ai-endpoint').value = data.itdAiEndpoint;
       }
       if (data.itdAiKey) {
         panel.querySelector('#itd-ai-key').value = data.itdAiKey;
       }
-      if (data.itdAiModel) {
-        panel.querySelector('#itd-ai-model').value = data.itdAiModel;
-      }
+      // Модель всегда фиксированная
+      panel.querySelector('#itd-ai-model').value = 'openai-gpt-oss-20b';
     });
     
     // Кнопка генерации
@@ -1317,20 +1317,19 @@ fragColor = vec4( result, 1.0 );
     generateBtn.addEventListener('click', async () => {
       const endpoint = panel.querySelector('#itd-ai-endpoint').value.trim();
       const apiKey = panel.querySelector('#itd-ai-key').value.trim();
-      const model = panel.querySelector('#itd-ai-model').value.trim();
+      const model = 'openai-gpt-oss-20b'; // Фиксированная модель
       const prompt = panel.querySelector('#itd-ai-prompt').value.trim();
       const resultArea = panel.querySelector('#itd-ai-result');
       
-      if (!endpoint || !apiKey || !model || !prompt) {
+      if (!endpoint || !apiKey || !prompt) {
         alert('Заполните все поля');
         return;
       }
       
-      // Сохранить настройки
+      // Сохранить настройки (без модели)
       chrome.storage.local.set({
         itdAiEndpoint: endpoint,
-        itdAiKey: apiKey,
-        itdAiModel: model
+        itdAiKey: apiKey
       });
       
       generateBtn.disabled = true;
