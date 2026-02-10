@@ -1569,22 +1569,82 @@
         options && options.method === 'POST' &&
         options.body instanceof FormData) {
       
-      console.log('[ITD GIF] Intercepting /api/files/upload, replacing PNG with GIF');
+      console.log('[ITD GIF] ========== INTERCEPTED FETCH ==========');
+      console.log('[ITD GIF] URL:', url);
+      console.log('[ITD GIF] Method:', options.method);
+      console.log('[ITD GIF] Headers:', options.headers);
+      
+      // Показать содержимое FormData
+      console.log('[ITD GIF] Original FormData:');
+      for (const [key, value] of options.body.entries()) {
+        if (value instanceof Blob) {
+          console.log(`  ${key}:`, {
+            type: value.type,
+            size: value.size,
+            name: value.name || 'unnamed'
+          });
+        } else {
+          console.log(`  ${key}:`, value);
+        }
+      }
       
       const gifBlob = window.__itdGifBlob;
       if (gifBlob) {
+        console.log('[ITD GIF] GIF Blob to inject:', {
+          type: gifBlob.type,
+          size: gifBlob.size,
+          sizeKB: Math.round(gifBlob.size / 1024)
+        });
+        
+        // РЕЖИМ ОТЛАДКИ: остановить и показать данные
+        if (window.__itdDebugMode) {
+          console.log('[ITD GIF] ⚠️ DEBUG MODE: Request paused');
+          console.log('[ITD GIF] Inspect the data above');
+          console.log('[ITD GIF] To continue: window.__itdContinue = true');
+          
+          // Ждать подтверждения
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.__itdContinue) {
+                window.__itdContinue = false;
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+          
+          console.log('[ITD GIF] Continuing with request...');
+        }
+        
         // Создать новый FormData с GIF вместо PNG
         const newFormData = new FormData();
         
         // Скопировать все поля кроме file
+        console.log('[ITD GIF] Building new FormData:');
         for (const [key, value] of options.body.entries()) {
           if (key !== 'file') {
             newFormData.append(key, value);
+            console.log(`  Copied: ${key}`);
           }
         }
         
         // Добавить GIF файл
         newFormData.append('file', gifBlob, 'banner.gif');
+        console.log('  Added: file (GIF)', Math.round(gifBlob.size / 1024), 'KB');
+        
+        // Показать финальный FormData
+        console.log('[ITD GIF] Final FormData:');
+        for (const [key, value] of newFormData.entries()) {
+          if (value instanceof Blob) {
+            console.log(`  ${key}:`, {
+              type: value.type,
+              size: value.size,
+              name: value.name || 'unnamed'
+            });
+          } else {
+            console.log(`  ${key}:`, value);
+          }
+        }
         
         // Создать новые options с GIF
         const newOptions = {
@@ -1597,7 +1657,8 @@
         window.__itdGifBlob = null;
         
         showToast("GIF отправляется на сервер!");
-        console.log('[ITD GIF] Sending GIF instead of PNG, size:', Math.round(gifBlob.size / 1024), 'KB');
+        console.log('[ITD GIF] Sending modified request...');
+        console.log('[ITD GIF] ========================================');
         
         return originalFetch(url, newOptions);
       }
@@ -1606,6 +1667,10 @@
     // Обычный запрос
     return originalFetch(...args);
   };
+  
+  // Включить режим отладки через консоль:
+  // window.__itdDebugMode = true
+  console.log('[ITD GIF] Debug mode available: set window.__itdDebugMode = true to pause requests');
 
   function resetAll() {
     endPreviewDrag();
