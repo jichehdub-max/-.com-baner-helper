@@ -1455,7 +1455,7 @@
       return { ok: false, message: "Загрузите GIF файл для экспорта в GIF формате. Для статичных изображений используйте 'Экспорт PNG'." };
     }
 
-    // Конвертировать GIF data URL в Blob
+    // Конвертировать GIF в Blob
     try {
       let gifBlob;
       
@@ -1464,67 +1464,95 @@
         const response = await fetch(gifImage.src);
         gifBlob = await response.blob();
       } else {
-        // Если это URL - скачать через fetch с CORS
-        const response = await fetch(gifImage.src, { mode: 'cors' });
-        gifBlob = await response.blob();
+        // Если это URL - попробовать скачать
+        try {
+          const response = await fetch(gifImage.src, { mode: 'no-cors' });
+          gifBlob = await response.blob();
+        } catch (corsError) {
+          console.warn('[ITD GIF] CORS error, using element as source:', corsError);
+          // Если CORS блокирует - использовать element напрямую
+          // Создать canvas и отрисовать GIF
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = gifImage.width;
+          tempCanvas.height = gifImage.height;
+          const tempCtx = tempCanvas.getContext('2d');
+          
+          try {
+            tempCtx.drawImage(gifImage.element, 0, 0);
+            // Конвертировать в PNG (т.к. GIF недоступен из-за CORS)
+            gifBlob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+            showToast("⚠️ CORS блокирует GIF. Будет сохранён как PNG.");
+          } catch (drawError) {
+            return { ok: false, message: `CORS блокирует доступ к GIF. Загрузите файл напрямую (не по URL).` };
+          }
+        }
       }
       
       // Сохранить GIF Blob для перехвата
       window.__itdForceGifUpload = true;
       window.__itdGifBlob = gifBlob;
       
-      showToast("Режим GIF активирован. Ищу кнопку 'Сохранить'...");
+      showToast("Режим GIF активирован. Применяю на canvas...");
+      
+      // Сначала применить изображение на canvas
+      const applyResult = await applyToCanvas();
+      if (!applyResult.ok) {
+        window.__itdForceGifUpload = false;
+        window.__itdGifBlob = null;
+        return { ok: false, message: `Не удалось применить на canvas: ${applyResult.message}` };
+      }
+      
+      showToast("Изображение применено. Ищу кнопку 'Сохранить'...");
+      
+      // Подождать немного чтобы canvas обновился
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Найти и нажать кнопку "Сохранить" на сайте
-      setTimeout(() => {
-        // Попробовать разные селекторы для кнопки сохранения
-        const saveButtonSelectors = [
-          'button.drawing-btn.drawing-btn--save',
-          'button.drawing-btn--save',
-          'button[class*="drawing-btn"][class*="save"]',
-          'button:has-text("Сохранить")',
-          'button[aria-label*="Сохранить"]',
-          'button[title*="Сохранить"]'
-        ];
-        
-        let saveButton = null;
-        for (const selector of saveButtonSelectors) {
-          try {
-            saveButton = document.querySelector(selector);
-            if (saveButton) break;
-          } catch (e) {
-            // Игнорировать ошибки селектора
-          }
+      const saveButtonSelectors = [
+        'button.drawing-btn.drawing-btn--save:not([disabled])',
+        'button.drawing-btn--save:not([disabled])',
+        'button[class*="drawing-btn"][class*="save"]:not([disabled])'
+      ];
+      
+      let saveButton = null;
+      for (const selector of saveButtonSelectors) {
+        try {
+          saveButton = document.querySelector(selector);
+          if (saveButton) break;
+        } catch (e) {
+          // Игнорировать ошибки селектора
         }
+      }
+      
+      // Если не нашли по селектору - искать по тексту (не disabled)
+      if (!saveButton) {
+        const buttons = Array.from(document.querySelectorAll('button:not([disabled])'));
+        saveButton = buttons.find(btn => {
+          const text = btn.textContent.toLowerCase();
+          return text.includes('сохранить') || text.includes('save');
+        });
+      }
+      
+      if (saveButton) {
+        console.log('[ITD GIF] Found save button, clicking...', saveButton);
+        showToast("Кнопка 'Сохранить' найдена! Нажимаю...");
         
-        // Если не нашли по селектору - искать по тексту
-        if (!saveButton) {
-          const buttons = Array.from(document.querySelectorAll('button'));
-          saveButton = buttons.find(btn => {
-            const text = btn.textContent.toLowerCase();
-            return text.includes('сохранить') || text.includes('save');
-          });
-        }
+        // Нажать кнопку
+        saveButton.click();
         
-        if (saveButton) {
-          console.log('[ITD GIF] Found save button, clicking...', saveButton);
-          showToast("Кнопка 'Сохранить' найдена! Нажимаю...");
-          
-          // Нажать кнопку
-          saveButton.click();
-          
-          setTimeout(() => {
-            showToast("GIF отправляется на сервер...");
-          }, 500);
-        } else {
-          console.warn('[ITD GIF] Save button not found');
-          showToast("Кнопка 'Сохранить' не найдена. Нажмите её вручную.");
-        }
-      }, 300);
+        setTimeout(() => {
+          showToast("GIF отправляется на сервер...");
+        }, 500);
+      } else {
+        console.warn('[ITD GIF] Save button not found or disabled');
+        showToast("Кнопка 'Сохранить' не найдена или неактивна. Нажмите её вручную.");
+      }
       
       return { ok: true, message: `Режим GIF активирован (${Math.round(gifBlob.size / 1024)}KB). Автоматическое сохранение...` };
     } catch (err) {
       console.error('[ITD GIF] Error preparing GIF:', err);
+      window.__itdForceGifUpload = false;
+      window.__itdGifBlob = null;
       return { ok: false, message: `Ошибка подготовки GIF: ${err.message}` };
     }
   }
