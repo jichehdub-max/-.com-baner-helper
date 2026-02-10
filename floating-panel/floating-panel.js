@@ -1188,8 +1188,35 @@ fragColor = vec4( result, 1.0 );
   
   // Применить тему
   function applyTheme(theme) {
+    // Сбросить кастомные стили перед применением обычной темы
+    document.body.style.background = '';
+    document.body.style.animation = '';
+    
+    // Удалить стиль градиента если есть
+    const gradientStyle = document.getElementById('itd-custom-gradient-style');
+    if (gradientStyle) {
+      gradientStyle.remove();
+    }
+    
+    // Сбросить CSS переменные
+    document.documentElement.style.removeProperty('--itd-theme-primary');
+    document.documentElement.style.removeProperty('--itd-theme-secondary');
+    document.documentElement.style.removeProperty('--color-text');
+    document.documentElement.style.removeProperty('--color-text-secondary');
+    document.documentElement.style.removeProperty('--color-background');
+    document.documentElement.style.removeProperty('--color-card');
+    document.documentElement.style.removeProperty('--color-border');
+    
+    // Применить новую тему
     document.documentElement.setAttribute('data-itd-custom-theme', theme);
     updateButtonColors(theme);
+    
+    // Сохранить выбор (удалить параметры кастомной темы)
+    chrome.storage.local.set({ 
+      itdCustomTheme: theme,
+      itdLastCustomThemeParams: null
+    });
+    
     console.log("[ITD Floating Panel] Applied theme:", theme);
   }
   
