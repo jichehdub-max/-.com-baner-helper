@@ -1291,6 +1291,22 @@ fragColor = vec4( result, 1.0 );
     }
     
     try {
+      // Создать текстуру шума для iChannel0
+      const noiseTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
+      
+      // Создать случайные данные 256x256
+      const noiseData = new Uint8Array(256 * 256 * 4);
+      for (let i = 0; i < noiseData.length; i++) {
+        noiseData[i] = Math.random() * 255;
+      }
+      
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0, gl.RGBA, gl.UNSIGNED_BYTE, noiseData);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      
       const vs = gl.createShader(gl.VERTEX_SHADER);
       gl.shaderSource(vs, `attribute vec2 p; void main(){gl_Position=vec4(p,0.,1.);}`);
       gl.compileShader(vs);
@@ -1299,6 +1315,9 @@ fragColor = vec4( result, 1.0 );
       
       // Обработать код шейдера - поддержка разных форматов Shadertoy
       let shaderCode = code.trim();
+      
+      // Заменить texture() на texture2D() для WebGL 1.0
+      shaderCode = shaderCode.replace(/\btexture\s*\(/g, 'texture2D(');
       
       // Проверить есть ли уже mainImage функция
       const hasMainImage = /void\s+mainImage\s*\(/.test(shaderCode);
@@ -1407,6 +1426,34 @@ fragColor = vec4( result, 1.0 );
       const uDate = gl.getUniformLocation(prog, "iDate");
       const uTimeDelta = gl.getUniformLocation(prog, "iTimeDelta");
       const uFrame = gl.getUniformLocation(prog, "iFrame");
+      const uChannel0 = gl.getUniformLocation(prog, "iChannel0");
+      const uChannel1 = gl.getUniformLocation(prog, "iChannel1");
+      const uChannel2 = gl.getUniformLocation(prog, "iChannel2");
+      const uChannel3 = gl.getUniformLocation(prog, "iChannel3");
+      
+      // Привязать текстуру шума к iChannel0
+      if (uChannel0) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
+        gl.uniform1i(uChannel0, 0);
+      }
+      
+      // Привязать ту же текстуру к остальным каналам (если нужны)
+      if (uChannel1) {
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
+        gl.uniform1i(uChannel1, 1);
+      }
+      if (uChannel2) {
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
+        gl.uniform1i(uChannel2, 2);
+      }
+      if (uChannel3) {
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
+        gl.uniform1i(uChannel3, 3);
+      }
       
       const start = Date.now();
       let frame = 0;
