@@ -1296,13 +1296,85 @@ fragColor = vec4( result, 1.0 );
       gl.compileShader(vs);
       
       const fs = gl.createShader(gl.FRAGMENT_SHADER);
-      const wrapped = `precision mediump float;uniform float iTime;uniform vec3 iResolution;${code}void main(){mainImage(gl_FragColor,gl_FragCoord.xy);}`;
+      
+      // Обработать код шейдера - поддержка разных форматов Shadertoy
+      let shaderCode = code.trim();
+      
+      // Проверить есть ли уже mainImage функция
+      const hasMainImage = /void\s+mainImage\s*\(/.test(shaderCode);
+      
+      // Если нет mainImage - обернуть код
+      let wrapped;
+      if (hasMainImage) {
+        // Код уже содержит mainImage - добавить только uniforms и main
+        wrapped = `
+          precision mediump float;
+          uniform float iTime;
+          uniform vec3 iResolution;
+          uniform vec4 iMouse;
+          uniform vec4 iDate;
+          uniform float iTimeDelta;
+          uniform int iFrame;
+          uniform float iFrameRate;
+          uniform float iChannelTime[4];
+          uniform vec3 iChannelResolution[4];
+          uniform sampler2D iChannel0;
+          uniform sampler2D iChannel1;
+          uniform sampler2D iChannel2;
+          uniform sampler2D iChannel3;
+          
+          ${shaderCode}
+          
+          void main() {
+            mainImage(gl_FragColor, gl_FragCoord.xy);
+          }
+        `;
+      } else {
+        // Код без mainImage - обернуть полностью
+        wrapped = `
+          precision mediump float;
+          uniform float iTime;
+          uniform vec3 iResolution;
+          uniform vec4 iMouse;
+          uniform vec4 iDate;
+          uniform float iTimeDelta;
+          uniform int iFrame;
+          uniform float iFrameRate;
+          uniform float iChannelTime[4];
+          uniform vec3 iChannelResolution[4];
+          uniform sampler2D iChannel0;
+          uniform sampler2D iChannel1;
+          uniform sampler2D iChannel2;
+          uniform sampler2D iChannel3;
+          
+          void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+            ${shaderCode}
+          }
+          
+          void main() {
+            mainImage(gl_FragColor, gl_FragCoord.xy);
+          }
+        `;
+      }
+      
       gl.shaderSource(fs, wrapped);
       gl.compileShader(fs);
       
       if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-        console.error("[ITD Floating Panel] Shader error:", gl.getShaderInfoLog(fs));
-        alert("Ошибка компиляции шейдера:\n" + gl.getShaderInfoLog(fs));
+        const error = gl.getShaderInfoLog(fs);
+        console.error("[ITD Floating Panel] Shader compilation error:", error);
+        
+        // Показать более понятную ошибку
+        const lines = wrapped.split('\n');
+        const errorMatch = error.match(/ERROR: \d+:(\d+):/);
+        if (errorMatch) {
+          const lineNum = parseInt(errorMatch[1]) - 1;
+          const errorLine = lines[lineNum];
+          console.error(`Line ${lineNum}: ${errorLine}`);
+        }
+        
+        alert("Ошибка компиляции шейдера:\n" + error);
+        clearShader();
         return;
       }
       
@@ -1310,6 +1382,14 @@ fragColor = vec4( result, 1.0 );
       gl.attachShader(prog, vs);
       gl.attachShader(prog, fs);
       gl.linkProgram(prog);
+      
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        console.error("[ITD Floating Panel] Shader link error:", gl.getProgramInfoLog(prog));
+        alert("Ошибка линковки шейдера:\n" + gl.getProgramInfoLog(prog));
+        clearShader();
+        return;
+      }
+      
       gl.useProgram(prog);
       
       const buf = gl.createBuffer();
@@ -1320,9 +1400,17 @@ fragColor = vec4( result, 1.0 );
       gl.enableVertexAttribArray(pos);
       gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
       
+      // Получить все uniform locations
       const uTime = gl.getUniformLocation(prog, "iTime");
       const uRes = gl.getUniformLocation(prog, "iResolution");
+      const uMouse = gl.getUniformLocation(prog, "iMouse");
+      const uDate = gl.getUniformLocation(prog, "iDate");
+      const uTimeDelta = gl.getUniformLocation(prog, "iTimeDelta");
+      const uFrame = gl.getUniformLocation(prog, "iFrame");
+      
       const start = Date.now();
+      let frame = 0;
+      let lastTime = start;
       
       function render() {
         const shaderCanvas = document.getElementById('itd-shader-canvas');
@@ -1331,17 +1419,39 @@ fragColor = vec4( result, 1.0 );
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.uniform1f(uTime, (Date.now() - start) / 1000);
-        gl.uniform3f(uRes, canvas.width, canvas.height, 1);
+        
+        const now = Date.now();
+        const time = (now - start) / 1000;
+        const timeDelta = (now - lastTime) / 1000;
+        lastTime = now;
+        frame++;
+        
+        // Установить uniforms
+        if (uTime) gl.uniform1f(uTime, time);
+        if (uRes) gl.uniform3f(uRes, canvas.width, canvas.height, 1);
+        if (uMouse) gl.uniform4f(uMouse, 0, 0, 0, 0);
+        if (uDate) {
+          const date = new Date();
+          gl.uniform4f(uDate, 
+            date.getFullYear(), 
+            date.getMonth(), 
+            date.getDate(), 
+            date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()
+          );
+        }
+        if (uTimeDelta) gl.uniform1f(uTimeDelta, timeDelta);
+        if (uFrame) gl.uniform1i(uFrame, frame);
+        
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         requestAnimationFrame(render);
       }
       
       render();
-      console.log("[ITD Floating Panel] Shader applied");
+      console.log("[ITD Floating Panel] Shader applied successfully");
     } catch (err) {
       console.error("[ITD Floating Panel] Shader error:", err);
       alert("Ошибка шейдера: " + err.message);
+      clearShader();
     }
   }
   
