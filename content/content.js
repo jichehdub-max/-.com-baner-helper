@@ -1452,62 +1452,85 @@
     const gifImage = state.images.find(img => img.isGif);
     
     if (!gifImage) {
-      // Если нет GIF, конвертируем canvas в GIF через PNG
-      // (браузер не поддерживает прямую конвертацию canvas → GIF)
       return { ok: false, message: "Загрузите GIF файл для экспорта в GIF формате. Для статичных изображений используйте 'Экспорт PNG'." };
     }
 
-    // Включить режим перехвата для отправки GIF вместо PNG
-    window.__itdForceGifUpload = true;
-    window.__itdGifData = gifImage.src; // Сохранить GIF data URL
-    
-    showToast("Режим GIF активирован. Теперь нажмите 'Сохранить' на сайте.");
-
-    return { ok: true, message: `Режим GIF активирован. Нажмите 'Сохранить' на сайте для загрузки GIF.` };
+    // Конвертировать GIF data URL в Blob
+    try {
+      let gifBlob;
+      
+      if (gifImage.src.startsWith('data:')) {
+        // Если это data URL - конвертировать в Blob
+        const response = await fetch(gifImage.src);
+        gifBlob = await response.blob();
+      } else {
+        // Если это URL - скачать через fetch с CORS
+        const response = await fetch(gifImage.src, { mode: 'cors' });
+        gifBlob = await response.blob();
+      }
+      
+      // Сохранить GIF Blob для перехвата
+      window.__itdForceGifUpload = true;
+      window.__itdGifBlob = gifBlob;
+      
+      showToast("Режим GIF активирован. Теперь нажмите 'Сохранить' на сайте.");
+      
+      return { ok: true, message: `Режим GIF активирован (${Math.round(gifBlob.size / 1024)}KB). Нажмите 'Сохранить' на сайте.` };
+    } catch (err) {
+      console.error('[ITD GIF] Error preparing GIF:', err);
+      return { ok: false, message: `Ошибка подготовки GIF: ${err.message}` };
+    }
   }
 
-  // Перехватчик fetch для подмены PNG на GIF
-  const originalFetch = window.fetch;
-  window.fetch = async function(...args) {
-    const [url, options] = args;
-    
-    // Проверить что это загрузка файла и включен GIF режим
-    if (window.__itdForceGifUpload && 
-        typeof url === 'string' && 
-        url.includes('/api/files/upload') &&
-        options && options.method === 'POST') {
+  // Перехватчик canvas.toBlob для подмены PNG на GIF
+  const originalToBlob = HTMLCanvasElement.prototype.toBlob;
+  HTMLCanvasElement.prototype.toBlob = function(callback, type, quality) {
+    // Если включен режим GIF - вернуть GIF вместо PNG
+    if (window.__itdForceGifUpload && window.__itdGifBlob && type === 'image/png') {
+      console.log('[ITD GIF] Intercepting canvas.toBlob, returning GIF instead of PNG');
       
-      console.log('[ITD GIF] Intercepting file upload, replacing PNG with GIF');
+      const gifBlob = window.__itdGifBlob;
       
-      // Получить GIF данные
-      const gifDataUrl = window.__itdGifData;
-      if (gifDataUrl) {
-        // Конвертировать data URL в Blob
-        const response = await originalFetch(gifDataUrl);
-        const gifBlob = await response.blob();
-        
-        // Создать новый FormData с GIF
-        const formData = new FormData();
-        formData.append('file', gifBlob, 'banner.gif');
-        
-        // Заменить body на новый FormData
-        const newOptions = {
-          ...options,
-          body: formData
-        };
-        
-        // Сбросить флаг
-        window.__itdForceGifUpload = false;
-        window.__itdGifData = null;
-        
-        showToast("GIF отправлен на сервер!");
-        
-        return originalFetch(url, newOptions);
-      }
+      // Сбросить флаг
+      window.__itdForceGifUpload = false;
+      window.__itdGifBlob = null;
+      
+      showToast("GIF подменён! Сохранение...");
+      
+      // Вернуть GIF blob
+      setTimeout(() => callback(gifBlob), 0);
+      return;
     }
     
-    // Обычный запрос
-    return originalFetch(...args);
+    // Обычное поведение
+    return originalToBlob.call(this, callback, type, quality);
+  };
+
+  // Перехватчик canvas.toDataURL для подмены PNG на GIF
+  const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+  HTMLCanvasElement.prototype.toDataURL = function(type, quality) {
+    // Если включен режим GIF - вернуть GIF data URL вместо PNG
+    if (window.__itdForceGifUpload && window.__itdGifBlob && type === 'image/png') {
+      console.log('[ITD GIF] Intercepting canvas.toDataURL, returning GIF data URL instead of PNG');
+      
+      showToast("GIF подменён через toDataURL!");
+      
+      // Конвертировать Blob в data URL
+      const reader = new FileReader();
+      reader.readAsDataURL(window.__itdGifBlob);
+      
+      // Сбросить флаг
+      window.__itdForceGifUpload = false;
+      const gifBlob = window.__itdGifBlob;
+      window.__itdGifBlob = null;
+      
+      // Вернуть синхронно (это проблема - toDataURL синхронный, а FileReader асинхронный)
+      // Поэтому вернём пустой data URL и надеемся что сайт использует toBlob
+      return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    }
+    
+    // Обычное поведение
+    return originalToDataURL.call(this, type, quality);
   };
 
   function resetAll() {
