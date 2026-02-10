@@ -1091,23 +1091,38 @@ fragColor = vec4( result, 1.0 );
       document.documentElement.style.setProperty('--color-background', bg);
       document.documentElement.style.setProperty('--color-card', cardBg);
       
-      // Создать анимацию градиента если её нет
+      // Создать плавную анимацию градиента
       if (!document.getElementById('itd-custom-gradient-style')) {
         const style = document.createElement('style');
         style.id = 'itd-custom-gradient-style';
         style.textContent = `
           @keyframes customGradient {
             0% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 50%, ${bg1} 100%);
+              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
             }
-            33% {
-              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 50%, ${bg2} 100%);
+            12.5% {
+              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
             }
-            66% {
-              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 50%, ${bg3} 100%);
+            25% {
+              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
+            }
+            37.5% {
+              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+            }
+            50% {
+              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
+            }
+            62.5% {
+              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
+            }
+            75% {
+              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+            }
+            87.5% {
+              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
             }
             100% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 50%, ${bg1} 100%);
+              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
             }
           }
         `;
@@ -1118,23 +1133,38 @@ fragColor = vec4( result, 1.0 );
         style.textContent = `
           @keyframes customGradient {
             0% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 50%, ${bg1} 100%);
+              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
             }
-            33% {
-              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 50%, ${bg2} 100%);
+            12.5% {
+              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
             }
-            66% {
-              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 50%, ${bg3} 100%);
+            25% {
+              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
+            }
+            37.5% {
+              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+            }
+            50% {
+              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
+            }
+            62.5% {
+              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
+            }
+            75% {
+              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+            }
+            87.5% {
+              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
             }
             100% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 50%, ${bg1} 100%);
+              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
             }
           }
         `;
       }
       
-      document.body.style.background = `linear-gradient(135deg, ${bg1} 0%, ${bg2} 50%, ${bg1} 100%)`;
-      document.body.style.animation = 'customGradient 15s ease-in-out infinite';
+      document.body.style.background = `linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%)`;
+      document.body.style.animation = 'customGradient 20s ease-in-out infinite';
     } else {
       document.documentElement.style.setProperty('--color-background', bg);
       document.documentElement.style.setProperty('--color-card', cardBg);
