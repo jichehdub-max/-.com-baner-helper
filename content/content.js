@@ -1473,9 +1473,56 @@
       window.__itdForceGifUpload = true;
       window.__itdGifBlob = gifBlob;
       
-      showToast("Режим GIF активирован. Теперь нажмите 'Сохранить' на сайте.");
+      showToast("Режим GIF активирован. Ищу кнопку 'Сохранить'...");
       
-      return { ok: true, message: `Режим GIF активирован (${Math.round(gifBlob.size / 1024)}KB). Нажмите 'Сохранить' на сайте.` };
+      // Найти и нажать кнопку "Сохранить" на сайте
+      setTimeout(() => {
+        // Попробовать разные селекторы для кнопки сохранения
+        const saveButtonSelectors = [
+          'button.drawing-btn.drawing-btn--save',
+          'button.drawing-btn--save',
+          'button[class*="drawing-btn"][class*="save"]',
+          'button:has-text("Сохранить")',
+          'button[aria-label*="Сохранить"]',
+          'button[title*="Сохранить"]'
+        ];
+        
+        let saveButton = null;
+        for (const selector of saveButtonSelectors) {
+          try {
+            saveButton = document.querySelector(selector);
+            if (saveButton) break;
+          } catch (e) {
+            // Игнорировать ошибки селектора
+          }
+        }
+        
+        // Если не нашли по селектору - искать по тексту
+        if (!saveButton) {
+          const buttons = Array.from(document.querySelectorAll('button'));
+          saveButton = buttons.find(btn => {
+            const text = btn.textContent.toLowerCase();
+            return text.includes('сохранить') || text.includes('save');
+          });
+        }
+        
+        if (saveButton) {
+          console.log('[ITD GIF] Found save button, clicking...', saveButton);
+          showToast("Кнопка 'Сохранить' найдена! Нажимаю...");
+          
+          // Нажать кнопку
+          saveButton.click();
+          
+          setTimeout(() => {
+            showToast("GIF отправляется на сервер...");
+          }, 500);
+        } else {
+          console.warn('[ITD GIF] Save button not found');
+          showToast("Кнопка 'Сохранить' не найдена. Нажмите её вручную.");
+        }
+      }, 300);
+      
+      return { ok: true, message: `Режим GIF активирован (${Math.round(gifBlob.size / 1024)}KB). Автоматическое сохранение...` };
     } catch (err) {
       console.error('[ITD GIF] Error preparing GIF:', err);
       return { ok: false, message: `Ошибка подготовки GIF: ${err.message}` };
