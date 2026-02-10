@@ -1342,6 +1342,14 @@ fragColor = vec4( result, 1.0 );
           uniform sampler2D iChannel2;
           uniform sampler2D iChannel3;
           
+          // Полифиллы для GLSL ES 1.0
+          #define min(a,b) ((a)<(b)?(a):(b))
+          #define max(a,b) ((a)>(b)?(a):(b))
+          #define clamp(x,minVal,maxVal) min(max(x,minVal),maxVal)
+          #define mix(x,y,a) ((x)*(1.0-(a))+(y)*(a))
+          #define fract(x) ((x)-floor(x))
+          #define mod(x,y) ((x)-(y)*floor((x)/(y)))
+          
           ${shaderCode}
           
           void main() {
@@ -1365,6 +1373,14 @@ fragColor = vec4( result, 1.0 );
           uniform sampler2D iChannel1;
           uniform sampler2D iChannel2;
           uniform sampler2D iChannel3;
+          
+          // Полифиллы для GLSL ES 1.0
+          #define min(a,b) ((a)<(b)?(a):(b))
+          #define max(a,b) ((a)>(b)?(a):(b))
+          #define clamp(x,minVal,maxVal) min(max(x,minVal),maxVal)
+          #define mix(x,y,a) ((x)*(1.0-(a))+(y)*(a))
+          #define fract(x) ((x)-floor(x))
+          #define mod(x,y) ((x)-(y)*floor((x)/(y)))
           
           void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             ${shaderCode}
