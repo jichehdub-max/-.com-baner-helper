@@ -1061,6 +1061,17 @@ fragColor = vec4( result, 1.0 );
   function applyCustomTheme(primary, secondary, bg, gradient) {
     document.documentElement.setAttribute('data-itd-custom-theme', 'custom');
     
+    // СОХРАНИТЬ параметры кастомной темы для автозагрузки
+    chrome.storage.local.set({
+      itdCustomTheme: 'custom',
+      itdLastCustomThemeParams: {
+        primary,
+        secondary,
+        bg,
+        gradient
+      }
+    });
+    
     // Определить контрастный цвет текста
     const textColor = getContrastColor(bg);
     const cardBg = adjustBrightness(bg, 20);
@@ -1654,12 +1665,21 @@ fragColor = vec4( result, 1.0 );
   // Инициализация
   function init() {
     // Загрузить и применить сохранённую тему сразу
-    chrome.storage.local.get(['itdCustomTheme', 'itdAutoTheme', 'itdShaderCode', 'itdAutoShader'], (data) => {
+    chrome.storage.local.get(['itdCustomTheme', 'itdLastCustomThemeParams', 'itdAutoTheme', 'itdShaderCode', 'itdAutoShader'], (data) => {
       // Применить тему если автозапуск включен
       const autoTheme = data.itdAutoTheme !== undefined ? data.itdAutoTheme : true;
       if (autoTheme && data.itdCustomTheme) {
         console.log("[ITD Floating Panel] Auto-applying theme:", data.itdCustomTheme);
-        applyTheme(data.itdCustomTheme);
+        
+        // Если это кастомная тема - применить с параметрами
+        if (data.itdCustomTheme === 'custom' && data.itdLastCustomThemeParams) {
+          const params = data.itdLastCustomThemeParams;
+          console.log("[ITD Floating Panel] Applying custom theme with params:", params);
+          applyCustomTheme(params.primary, params.secondary, params.bg, params.gradient);
+        } else {
+          // Обычная тема
+          applyTheme(data.itdCustomTheme);
+        }
       }
       
       // Применить шейдер если автозапуск включен
