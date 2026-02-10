@@ -1,8 +1,22 @@
+// ========== INJECT SCRIPT INTO PAGE CONTEXT ==========
+// Внедряем скрипт в контекст страницы ДО загрузки скриптов сайта
+(function injectScript() {
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('content/injected.js');
+  script.onload = function() {
+    console.log('[ITD Content] Injected script loaded');
+    this.remove();
+  };
+  (document.head || document.documentElement).appendChild(script);
+})();
+// ========== END INJECT ==========
+
 (() => {
   if (window.__itdRedrawHelperLoaded) {
     return;
   }
   window.__itdRedrawHelperLoaded = true;
+  
   const SETTINGS_KEY = "itdRedrawSettings";
 
   const defaults = {
@@ -1488,17 +1502,39 @@
         }
       }
       
-      // Сохранить GIF Blob для перехвата
-      window.__itdForceGifUpload = true;
-      window.__itdGifBlob = gifBlob;
+      console.log('[ITD GIF] GIF Blob prepared:', {
+        type: gifBlob.type,
+        size: gifBlob.size,
+        sizeKB: Math.round(gifBlob.size / 1024)
+      });
+      
+      // ОТПРАВИТЬ ДАННЫЕ В INJECTED SCRIPT через Custom Event
+      console.log('[ITD GIF] Sending GIF data to injected script...');
+      
+      // Конвертировать Blob в base64 для передачи через событие
+      const reader = new FileReader();
+      const base64Promise = new Promise((resolve) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(gifBlob);
+      });
+      const gifBase64 = await base64Promise;
+      
+      // Отправить событие в контекст страницы
+      window.dispatchEvent(new CustomEvent('ITD_GIF_UPLOAD', {
+        detail: {
+          gifData: gifBase64,
+          gifSize: gifBlob.size,
+          gifType: gifBlob.type
+        }
+      }));
+      
+      console.log('[ITD GIF] Event dispatched, waiting for injected script...');
       
       showToast("Режим GIF активирован. Применяю на canvas...");
       
       // Сначала применить изображение на canvas
       const applyResult = await applyToCanvas();
       if (!applyResult.ok) {
-        window.__itdForceGifUpload = false;
-        window.__itdGifBlob = null;
         return { ok: false, message: `Не удалось применить на canvas: ${applyResult.message}` };
       }
       
@@ -1551,126 +1587,9 @@
       return { ok: true, message: `Режим GIF активирован (${Math.round(gifBlob.size / 1024)}KB). Автоматическое сохранение...` };
     } catch (err) {
       console.error('[ITD GIF] Error preparing GIF:', err);
-      window.__itdForceGifUpload = false;
-      window.__itdGifBlob = null;
       return { ok: false, message: `Ошибка подготовки GIF: ${err.message}` };
     }
   }
-
-  // Перехватчик fetch для подмены PNG на GIF в запросе
-  const originalFetch = window.fetch;
-  window.fetch = async function(...args) {
-    const [url, options] = args;
-    
-    // Проверить что это загрузка файла и включен GIF режим
-    if (window.__itdForceGifUpload && 
-        typeof url === 'string' && 
-        url.includes('/api/files/upload') &&
-        options && options.method === 'POST' &&
-        options.body instanceof FormData) {
-      
-      console.log('[ITD GIF] ========== INTERCEPTED FETCH ==========');
-      console.log('[ITD GIF] URL:', url);
-      console.log('[ITD GIF] Method:', options.method);
-      console.log('[ITD GIF] Headers:', options.headers);
-      
-      // Показать содержимое FormData
-      console.log('[ITD GIF] Original FormData:');
-      for (const [key, value] of options.body.entries()) {
-        if (value instanceof Blob) {
-          console.log(`  ${key}:`, {
-            type: value.type,
-            size: value.size,
-            name: value.name || 'unnamed'
-          });
-        } else {
-          console.log(`  ${key}:`, value);
-        }
-      }
-      
-      const gifBlob = window.__itdGifBlob;
-      if (gifBlob) {
-        console.log('[ITD GIF] GIF Blob to inject:', {
-          type: gifBlob.type,
-          size: gifBlob.size,
-          sizeKB: Math.round(gifBlob.size / 1024)
-        });
-        
-        // РЕЖИМ ОТЛАДКИ: остановить и показать данные
-        if (window.__itdDebugMode) {
-          console.log('[ITD GIF] ⚠️ DEBUG MODE: Request paused');
-          console.log('[ITD GIF] Inspect the data above');
-          console.log('[ITD GIF] To continue: window.__itdContinue = true');
-          
-          // Ждать подтверждения
-          await new Promise(resolve => {
-            const checkInterval = setInterval(() => {
-              if (window.__itdContinue) {
-                window.__itdContinue = false;
-                clearInterval(checkInterval);
-                resolve();
-              }
-            }, 100);
-          });
-          
-          console.log('[ITD GIF] Continuing with request...');
-        }
-        
-        // Создать новый FormData с GIF вместо PNG
-        const newFormData = new FormData();
-        
-        // Скопировать все поля кроме file
-        console.log('[ITD GIF] Building new FormData:');
-        for (const [key, value] of options.body.entries()) {
-          if (key !== 'file') {
-            newFormData.append(key, value);
-            console.log(`  Copied: ${key}`);
-          }
-        }
-        
-        // Добавить GIF файл
-        newFormData.append('file', gifBlob, 'banner.gif');
-        console.log('  Added: file (GIF)', Math.round(gifBlob.size / 1024), 'KB');
-        
-        // Показать финальный FormData
-        console.log('[ITD GIF] Final FormData:');
-        for (const [key, value] of newFormData.entries()) {
-          if (value instanceof Blob) {
-            console.log(`  ${key}:`, {
-              type: value.type,
-              size: value.size,
-              name: value.name || 'unnamed'
-            });
-          } else {
-            console.log(`  ${key}:`, value);
-          }
-        }
-        
-        // Создать новые options с GIF
-        const newOptions = {
-          ...options,
-          body: newFormData
-        };
-        
-        // Сбросить флаг
-        window.__itdForceGifUpload = false;
-        window.__itdGifBlob = null;
-        
-        showToast("GIF отправляется на сервер!");
-        console.log('[ITD GIF] Sending modified request...');
-        console.log('[ITD GIF] ========================================');
-        
-        return originalFetch(url, newOptions);
-      }
-    }
-    
-    // Обычный запрос
-    return originalFetch(...args);
-  };
-  
-  // Включить режим отладки через консоль:
-  // window.__itdDebugMode = true
-  console.log('[ITD GIF] Debug mode available: set window.__itdDebugMode = true to pause requests');
 
   function resetAll() {
     endPreviewDrag();

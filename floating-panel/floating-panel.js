@@ -121,10 +121,7 @@ console.log("[ITD Floating Panel] Script starting...");
   function openPanel(panelName) {
     // Если панель уже существует - показать
     if (state.panels[panelName]) {
-      state.panels[panelName].style.display = 'block';
-      setTimeout(() => {
-        state.panels[panelName].classList.add('open');
-      }, 10);
+      state.panels[panelName].classList.add('open');
       return;
     }
     
@@ -154,9 +151,10 @@ console.log("[ITD Floating Panel] Script starting...");
     if (panel) {
       document.body.appendChild(panel);
       state.panels[panelName] = panel;
-      setTimeout(() => {
+      // Небольшая задержка для плавной анимации
+      requestAnimationFrame(() => {
         panel.classList.add('open');
-      }, 10);
+      });
     }
   }
   
@@ -165,9 +163,6 @@ console.log("[ITD Floating Panel] Script starting...");
     const panel = state.panels[panelName];
     if (panel) {
       panel.classList.remove('open');
-      setTimeout(() => {
-        panel.style.display = 'none';
-      }, 300);
     }
   }
   

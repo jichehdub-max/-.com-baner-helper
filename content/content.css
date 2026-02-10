@@ -1,7 +1,7 @@
 #itd-redraw-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2147483646;
+  z-index: 999996;
   pointer-events: none;
   font-family: "SF Pro Display", "Avenir Next", "Segoe UI Variable", "Trebuchet MS", sans-serif;
 }

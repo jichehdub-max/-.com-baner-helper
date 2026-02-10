@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ITD Banner Redraw Helper",
-  "version": "1.0.8",
+  "version": "1.0.5",
   "description": "Select an area, fit an image precisely, preview it, and apply to canvas. Auto-loading themes for итд.com.",
   "permissions": [
     "activeTab",
@@ -44,8 +44,18 @@
       "css": [
         "content/content.css"
       ],
-      "run_at": "document_idle",
+      "run_at": "document_start",
       "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/injected.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }
