@@ -400,6 +400,7 @@ console.log("[ITD Floating Panel] Script starting...");
         <div class="itd-actions">
           <button id="itd-apply-banner" class="itd-btn itd-btn-primary">Применить</button>
           <button id="itd-export-banner" class="itd-btn">Экспорт PNG</button>
+          <button id="itd-export-gif" class="itd-btn">Сохранить как GIF</button>
         </div>
       </div>
     `;
@@ -1565,6 +1566,18 @@ fragColor = vec4( result, 1.0 );
       console.log('[ITD Banner] Exported PNG');
     });
     
+    // Экспорт GIF
+    const exportGifBtn = panel.querySelector('#itd-export-gif');
+    exportGifBtn.addEventListener('click', async () => {
+      const resp = await sendToContentScript({ type: 'ITD_REDRAW_EXPORT_GIF' });
+      if (!resp.ok) {
+        alert(resp.message || 'Не удалось экспортировать GIF');
+        return;
+      }
+      alert(resp.message || 'GIF экспортирован!');
+      console.log('[ITD Banner] Exported GIF');
+    });
+    
     console.log("[ITD Floating Panel] Banner panel setup (using window.postMessage)");
   }
   
@@ -1677,7 +1690,7 @@ fragColor = vec4( result, 1.0 );
   init();
   
   console.log("[ITD Floating Panel] Script loaded successfully");
-  window.__itdFloatingPanelVersion = "1.0.7";
+  window.__itdFloatingPanelVersion = "1.0.8";
   
   // Уведомить background worker
   try {

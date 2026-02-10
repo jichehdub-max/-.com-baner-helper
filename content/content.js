@@ -1443,6 +1443,73 @@
     return { ok: true, message: `PNG сохранен: ${outWidth}x${outHeight}.` };
   }
 
+  async function exportGif() {
+    if (state.images.length === 0) {
+      return { ok: false, message: "Сначала загрузите изображение(я)." };
+    }
+
+    // Проверить есть ли GIF среди загруженных изображений
+    const gifImage = state.images.find(img => img.isGif);
+    
+    if (!gifImage) {
+      // Если нет GIF, конвертируем canvas в GIF через PNG
+      // (браузер не поддерживает прямую конвертацию canvas → GIF)
+      return { ok: false, message: "Загрузите GIF файл для экспорта в GIF формате. Для статичных изображений используйте 'Экспорт PNG'." };
+    }
+
+    // Включить режим перехвата для отправки GIF вместо PNG
+    window.__itdForceGifUpload = true;
+    window.__itdGifData = gifImage.src; // Сохранить GIF data URL
+    
+    showToast("Режим GIF активирован. Теперь нажмите 'Сохранить' на сайте.");
+
+    return { ok: true, message: `Режим GIF активирован. Нажмите 'Сохранить' на сайте для загрузки GIF.` };
+  }
+
+  // Перехватчик fetch для подмены PNG на GIF
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const [url, options] = args;
+    
+    // Проверить что это загрузка файла и включен GIF режим
+    if (window.__itdForceGifUpload && 
+        typeof url === 'string' && 
+        url.includes('/api/files/upload') &&
+        options && options.method === 'POST') {
+      
+      console.log('[ITD GIF] Intercepting file upload, replacing PNG with GIF');
+      
+      // Получить GIF данные
+      const gifDataUrl = window.__itdGifData;
+      if (gifDataUrl) {
+        // Конвертировать data URL в Blob
+        const response = await originalFetch(gifDataUrl);
+        const gifBlob = await response.blob();
+        
+        // Создать новый FormData с GIF
+        const formData = new FormData();
+        formData.append('file', gifBlob, 'banner.gif');
+        
+        // Заменить body на новый FormData
+        const newOptions = {
+          ...options,
+          body: formData
+        };
+        
+        // Сбросить флаг
+        window.__itdForceGifUpload = false;
+        window.__itdGifData = null;
+        
+        showToast("GIF отправлен на сервер!");
+        
+        return originalFetch(url, newOptions);
+      }
+    }
+    
+    // Обычный запрос
+    return originalFetch(...args);
+  };
+
   function resetAll() {
     endPreviewDrag();
     stopVideoLoop();
@@ -1575,6 +1642,10 @@
 
     if (message.type === "ITD_REDRAW_EXPORT_PNG") {
       return exportPng();
+    }
+
+    if (message.type === "ITD_REDRAW_EXPORT_GIF") {
+      return exportGif();
     }
 
     if (message.type === "ITD_REDRAW_STOP_LOOP") {
