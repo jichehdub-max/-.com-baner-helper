@@ -19,3 +19,22 @@ desktop.ini
 .env.local
 config.local.js
 settings.local.json
+
+# Test files
+test-*.html
+test-*.js
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Old release notes (keep only latest)
+RELEASE-NOTES-v1.0.[0-6].md
