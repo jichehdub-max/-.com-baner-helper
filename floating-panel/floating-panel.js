@@ -1311,7 +1311,18 @@ fragColor = vec4( result, 1.0 );
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
       
       const vs = gl.createShader(gl.VERTEX_SHADER);
-      gl.shaderSource(vs, `attribute vec2 p; void main(){gl_Position=vec4(p,0.,1.);}`);
+      if (isWebGL2) {
+        gl.shaderSource(vs, `#version 300 es
+in vec2 p;
+void main() {
+  gl_Position = vec4(p, 0., 1.);
+}`);
+      } else {
+        gl.shaderSource(vs, `attribute vec2 p;
+void main() {
+  gl_Position = vec4(p, 0., 1.);
+}`);
+      }
       gl.compileShader(vs);
       
       const fs = gl.createShader(gl.FRAGMENT_SHADER);
