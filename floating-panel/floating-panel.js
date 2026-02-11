@@ -1331,78 +1331,102 @@ fragColor = vec4( result, 1.0 );
       let wrapped;
       if (hasMainImage) {
         // Код уже содержит mainImage - добавить только uniforms и main
-        wrapped = `
-          ${isWebGL2 ? '#version 300 es' : ''}
-          precision mediump float;
-          ${isWebGL2 ? 'out vec4 fragColor;' : ''}
-          uniform float iTime;
-          uniform vec3 iResolution;
-          uniform vec4 iMouse;
-          uniform vec4 iDate;
-          uniform float iTimeDelta;
-          uniform int iFrame;
-          uniform float iFrameRate;
-          uniform float iChannelTime[4];
-          uniform vec3 iChannelResolution[4];
-          uniform sampler2D iChannel0;
-          uniform sampler2D iChannel1;
-          uniform sampler2D iChannel2;
-          uniform sampler2D iChannel3;
-          
-          ${!isWebGL2 ? `
-          // Полифиллы для GLSL ES 1.0
-          #define min(a,b) ((a)<(b)?(a):(b))
-          #define max(a,b) ((a)>(b)?(a):(b))
-          #define clamp(x,minVal,maxVal) min(max(x,minVal),maxVal)
-          #define mix(x,y,a) ((x)*(1.0-(a))+(y)*(a))
-          #define fract(x) ((x)-floor(x))
-          #define mod(x,y) ((x)-(y)*floor((x)/(y)))
-          ` : ''}
-          
-          ${shaderCode}
-          
-          void main() {
-            ${isWebGL2 ? 'mainImage(fragColor, gl_FragCoord.xy);' : 'mainImage(gl_FragColor, gl_FragCoord.xy);'}
-          }
-        `;
+        if (isWebGL2) {
+          wrapped = `#version 300 es
+precision mediump float;
+out vec4 fragColor;
+uniform float iTime;
+uniform vec3 iResolution;
+uniform vec4 iMouse;
+uniform vec4 iDate;
+uniform float iTimeDelta;
+uniform int iFrame;
+uniform float iFrameRate;
+uniform float iChannelTime[4];
+uniform vec3 iChannelResolution[4];
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+
+${shaderCode}
+
+void main() {
+  mainImage(fragColor, gl_FragCoord.xy);
+}`;
+        } else {
+          wrapped = `precision mediump float;
+uniform float iTime;
+uniform vec3 iResolution;
+uniform vec4 iMouse;
+uniform vec4 iDate;
+uniform float iTimeDelta;
+uniform int iFrame;
+uniform float iFrameRate;
+uniform float iChannelTime[4];
+uniform vec3 iChannelResolution[4];
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+
+${shaderCode}
+
+void main() {
+  mainImage(gl_FragColor, gl_FragCoord.xy);
+}`;
+        }
       } else {
         // Код без mainImage - обернуть полностью
-        wrapped = `
-          ${isWebGL2 ? '#version 300 es' : ''}
-          precision mediump float;
-          ${isWebGL2 ? 'out vec4 fragColor;' : ''}
-          uniform float iTime;
-          uniform vec3 iResolution;
-          uniform vec4 iMouse;
-          uniform vec4 iDate;
-          uniform float iTimeDelta;
-          uniform int iFrame;
-          uniform float iFrameRate;
-          uniform float iChannelTime[4];
-          uniform vec3 iChannelResolution[4];
-          uniform sampler2D iChannel0;
-          uniform sampler2D iChannel1;
-          uniform sampler2D iChannel2;
-          uniform sampler2D iChannel3;
-          
-          ${!isWebGL2 ? `
-          // Полифиллы для GLSL ES 1.0
-          #define min(a,b) ((a)<(b)?(a):(b))
-          #define max(a,b) ((a)>(b)?(a):(b))
-          #define clamp(x,minVal,maxVal) min(max(x,minVal),maxVal)
-          #define mix(x,y,a) ((x)*(1.0-(a))+(y)*(a))
-          #define fract(x) ((x)-floor(x))
-          #define mod(x,y) ((x)-(y)*floor((x)/(y)))
-          ` : ''}
-          
-          void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-            ${shaderCode}
-          }
-          
-          void main() {
-            ${isWebGL2 ? 'mainImage(fragColor, gl_FragCoord.xy);' : 'mainImage(gl_FragColor, gl_FragCoord.xy);'}
-          }
-        `;
+        if (isWebGL2) {
+          wrapped = `#version 300 es
+precision mediump float;
+out vec4 fragColor;
+uniform float iTime;
+uniform vec3 iResolution;
+uniform vec4 iMouse;
+uniform vec4 iDate;
+uniform float iTimeDelta;
+uniform int iFrame;
+uniform float iFrameRate;
+uniform float iChannelTime[4];
+uniform vec3 iChannelResolution[4];
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  ${shaderCode}
+}
+
+void main() {
+  mainImage(fragColor, gl_FragCoord.xy);
+}`;
+        } else {
+          wrapped = `precision mediump float;
+uniform float iTime;
+uniform vec3 iResolution;
+uniform vec4 iMouse;
+uniform vec4 iDate;
+uniform float iTimeDelta;
+uniform int iFrame;
+uniform float iFrameRate;
+uniform float iChannelTime[4];
+uniform vec3 iChannelResolution[4];
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  ${shaderCode}
+}
+
+void main() {
+  mainImage(gl_FragColor, gl_FragCoord.xy);
+}`;
+        }
       }
       
       gl.shaderSource(fs, wrapped);
