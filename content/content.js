@@ -1462,75 +1462,97 @@
       return { ok: false, message: "Сначала загрузите изображение(я)." };
     }
 
-    // Проверить есть ли GIF среди загруженных изображений
-    const gifImage = state.images.find(img => img.isGif);
+    // Проверить есть ли GIF или MP4 среди загруженных изображений
+    const animatedImage = state.images.find(img => img.isGif || img.isVideo);
     
-    if (!gifImage) {
-      return { ok: false, message: "Загрузите GIF файл для экспорта в GIF формате. Для статичных изображений используйте 'Экспорт PNG'." };
+    if (!animatedImage) {
+      return { ok: false, message: "Загрузите GIF или MP4 файл для экспорта анимации. Для статичных изображений используйте 'Экспорт PNG'." };
     }
 
-    // Конвертировать GIF в Blob
+    // Конвертировать в Blob
     try {
-      let gifBlob;
+      let fileBlob;
+      let fileType = 'image/gif';
+      let fileName = 'banner.gif';
       
-      if (gifImage.src.startsWith('data:')) {
-        // Если это data URL - конвертировать в Blob
-        const response = await fetch(gifImage.src);
-        gifBlob = await response.blob();
-      } else {
-        // Если это URL - попробовать скачать
-        try {
-          const response = await fetch(gifImage.src, { mode: 'no-cors' });
-          gifBlob = await response.blob();
-        } catch (corsError) {
-          console.warn('[ITD GIF] CORS error, using element as source:', corsError);
-          // Если CORS блокирует - использовать element напрямую
-          // Создать canvas и отрисовать GIF
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = gifImage.width;
-          tempCanvas.height = gifImage.height;
-          const tempCtx = tempCanvas.getContext('2d');
-          
+      if (animatedImage.isVideo) {
+        // Для MP4 - попробовать получить оригинальный файл
+        if (animatedImage.src.startsWith('data:')) {
+          const response = await fetch(animatedImage.src);
+          fileBlob = await response.blob();
+          fileType = 'video/mp4';
+          fileName = 'banner.mp4';
+        } else {
+          return { ok: false, message: "MP4 должен быть загружен как файл, а не по URL." };
+        }
+      } else if (animatedImage.isGif) {
+        // Для GIF
+        if (animatedImage.src.startsWith('data:')) {
+          const response = await fetch(animatedImage.src);
+          fileBlob = await response.blob();
+        } else {
           try {
-            tempCtx.drawImage(gifImage.element, 0, 0);
-            // Конвертировать в PNG (т.к. GIF недоступен из-за CORS)
-            gifBlob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-            showToast("⚠️ CORS блокирует GIF. Будет сохранён как PNG.");
-          } catch (drawError) {
-            return { ok: false, message: `CORS блокирует доступ к GIF. Загрузите файл напрямую (не по URL).` };
+            const response = await fetch(animatedImage.src, { mode: 'no-cors' });
+            fileBlob = await response.blob();
+          } catch (corsError) {
+            console.warn('[ITD GIF] CORS error, using element as source:', corsError);
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = animatedImage.width;
+            tempCanvas.height = animatedImage.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            try {
+              tempCtx.drawImage(animatedImage.element, 0, 0);
+              fileBlob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+              showToast("⚠️ CORS блокирует GIF. Будет сохранён как PNG.");
+            } catch (drawError) {
+              return { ok: false, message: `CORS блокирует доступ к GIF. Загрузите файл напрямую (не по URL).` };
+            }
           }
         }
       }
       
-      console.log('[ITD GIF] GIF Blob prepared:', {
-        type: gifBlob.type,
-        size: gifBlob.size,
-        sizeKB: Math.round(gifBlob.size / 1024)
+      const fileSizeKB = Math.round(fileBlob.size / 1024);
+      const fileSizeMB = (fileBlob.size / (1024 * 1024)).toFixed(2);
+      
+      console.log('[ITD GIF] File Blob prepared:', {
+        type: fileBlob.type,
+        size: fileBlob.size,
+        sizeKB: fileSizeKB,
+        sizeMB: fileSizeMB
       });
       
+      // Предупреждение о большом размере
+      if (fileBlob.size > 50 * 1024 * 1024) {
+        showToast(`⚠️ Файл очень большой (${fileSizeMB} MB). Сервер может отклонить загрузку.`);
+      } else if (fileBlob.size > 20 * 1024 * 1024) {
+        showToast(`⚠️ Файл большой (${fileSizeMB} MB). Загрузка может занять время.`);
+      }
+      
       // ОТПРАВИТЬ ДАННЫЕ В INJECTED SCRIPT через Custom Event
-      console.log('[ITD GIF] Sending GIF data to injected script...');
+      console.log('[ITD GIF] Sending file data to injected script...');
       
       // Конвертировать Blob в base64 для передачи через событие
       const reader = new FileReader();
       const base64Promise = new Promise((resolve) => {
         reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(gifBlob);
+        reader.readAsDataURL(fileBlob);
       });
-      const gifBase64 = await base64Promise;
+      const fileBase64 = await base64Promise;
       
       // Отправить событие в контекст страницы
       window.dispatchEvent(new CustomEvent('ITD_GIF_UPLOAD', {
         detail: {
-          gifData: gifBase64,
-          gifSize: gifBlob.size,
-          gifType: gifBlob.type
+          gifData: fileBase64,
+          gifSize: fileBlob.size,
+          gifType: fileType,
+          fileName: fileName
         }
       }));
       
       console.log('[ITD GIF] Event dispatched, waiting for injected script...');
       
-      showToast("Режим GIF активирован. Применяю на canvas...");
+      showToast(`Режим ${animatedImage.isVideo ? 'MP4' : 'GIF'} активирован. Применяю на canvas...`);
       
       // Сначала применить изображение на canvas
       const applyResult = await applyToCanvas();
@@ -1584,9 +1606,9 @@
         showToast("Кнопка 'Сохранить' не найдена или неактивна. Нажмите её вручную.");
       }
       
-      return { ok: true, message: `Режим GIF активирован (${Math.round(gifBlob.size / 1024)}KB). Автоматическое сохранение...` };
+      return { ok: true, message: `Режим ${animatedImage.isVideo ? 'MP4' : 'GIF'} активирован (${fileSizeMB} MB). Автоматическое сохранение...` };
     } catch (err) {
-      console.error('[ITD GIF] Error preparing GIF:', err);
+      console.error('[ITD GIF] Error preparing file:', err);
       return { ok: false, message: `Ошибка подготовки GIF: ${err.message}` };
     }
   }

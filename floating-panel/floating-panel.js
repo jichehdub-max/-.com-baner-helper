@@ -221,11 +221,29 @@ console.log("[ITD Floating Panel] Script starting...");
           </div>
           
           <div class="itd-section">
+            <label>Прозрачность фона: <span id="itd-bg-opacity-value">80%</span></label>
+            <input type="range" id="itd-custom-bg-opacity" min="0" max="100" value="80" step="5">
+            <p class="itd-hint">0% = полностью прозрачный, 100% = непрозрачный</p>
+          </div>
+          
+          <div class="itd-section">
             <label class="itd-checkbox">
               <input type="checkbox" id="itd-custom-gradient">
               <span>Градиентный режим</span>
             </label>
             <p class="itd-hint">Создаёт плавный градиент между основным и вторичным цветом</p>
+          </div>
+          
+          <div class="itd-section">
+            <label class="itd-checkbox">
+              <input type="checkbox" id="itd-custom-font-enabled">
+              <span>Кастомный шрифт</span>
+            </label>
+            <p class="itd-hint">Перетащите TTF файл в окно плагина для загрузки шрифта</p>
+            <div id="itd-font-drop-zone" class="itd-drop-zone" style="display: none;">
+              <p>📁 Перетащите .ttf файл сюда</p>
+              <p class="itd-font-name"></p>
+            </div>
           </div>
           
           <div class="itd-section">
@@ -265,6 +283,9 @@ console.log("[ITD Floating Panel] Script starting...");
               <option value="darkhole">The Big Bang</option>
               <option value="stars">Fractal Pyramid</option>
               <option value="sky">Realistic Clouds</option>
+              <option value="sea">Seascape</option>
+              <option value="tunnel">Tunnel Effect</option>
+              <option value="space">Starfield</option>
             </select>
           </div>
           
@@ -693,6 +714,341 @@ vec3 cloudcolour = vec3(1.1, 1.1, 0.9) * clamp((clouddark + cloudlight*c), 0.0, 
 f = cloudcover + cloudalpha*f*r;
 vec3 result = mix(skycolour, clamp(skytint * skycolour + cloudcolour, 0.0, 1.0), clamp(f + c, 0.0, 1.0));
 fragColor = vec4( result, 1.0 );
+}`,
+      sea: `// Created by inigo quilez - iq/2014
+//   https://www.youtube.com/c/InigoQuilez
+//   https://iquilezles.org/
+// A simple and cheap 2D shader to accompany the Pirates of the Caribean music.
+float fbm( vec2 p ){
+return 0.5000*texture( iChannel1, p*1.00 ).x + 0.2500*texture( iChannel1, p*2.02 ).x + 0.1250*texture( iChannel1, p*4.03 ).x + 0.0625*texture( iChannel1, p*8.04 ).x;
+}
+void mainImage( out vec4 fragColor, in vec2 fragCoord ){
+float time = mod( iTime, 60.0 );
+vec2 p = (2.0*fragCoord-iResolution.xy) / iResolution.y;
+vec2 i = p;
+// camera
+p += vec2(1.0,3.0)*0.001*2.0*cos( iTime*5.0 + vec2(0.0,1.5) );    
+p += vec2(1.0,3.0)*0.001*1.0*cos( iTime*9.0 + vec2(1.0,4.5) );    
+float an = 0.3*sin( 0.1*time );
+float co = cos(an);
+float si = sin(an);
+p = mat2( co, -si, si, co )*p*0.85;
+// water
+vec2 q = vec2(p.x,1.0)/p.y;
+q.y -= 0.9*time;    
+vec2 off = texture( iChannel0, 0.1*q*vec2(1.0,2.0) - vec2(0.0,0.007*iTime) ).xy;
+q += 0.4*(-1.0 + 2.0*off);
+vec3 col = 0.2*sqrt(texture( iChannel0, 0.05*q *vec2(1.0,4.0) + vec2(0.0,0.01*iTime) ).zyx);
+float re = 1.0-smoothstep( 0.0, 0.7, abs(p.x-0.6) - abs(p.y)*0.5+0.2 );
+col += 1.0*vec3(1.0,0.9,0.73)*re*0.2*(0.1+0.9*off.y)*5.0*(1.0-col.x);
+float re2 = 1.0-smoothstep( 0.0, 2.0, abs(p.x-0.6) - abs(p.y)*0.85 );
+col += 0.7*re2*smoothstep(0.35,1.0,texture( iChannel1, 0.075*q *vec2(1.0,4.0) ).x);
+// sky
+vec3 sky = vec3(0.0,0.05,0.1)*1.4;
+// stars    
+sky += 0.5*smoothstep( 0.95,1.00,texture( iChannel1, 0.25*p ).x);
+sky += 0.5*smoothstep( 0.85,1.0,texture( iChannel1, 0.25*p ).x);
+sky += 0.2*pow(1.0-max(0.0,p.y),2.0);
+// clouds    
+float f = fbm( 0.002*vec2(p.x,1.0)/p.y );
+vec3 cloud = vec3(0.3,0.4,0.5)*0.7*(1.0-0.85*smoothstep(0.4,1.0,f));
+sky = mix( sky, cloud, 0.95*smoothstep( 0.4, 0.6, f ) );
+sky = mix( sky, vec3(0.33,0.34,0.35), pow(1.0-max(0.0,p.y),2.0) );
+col = mix( col, sky, smoothstep(0.0,0.1,p.y) );
+// horizon
+col += 0.1*pow(clamp(1.0-abs(p.y),0.0,1.0),9.0);
+// moon
+float d = length(p-vec2(0.6,0.5));
+vec3 moon = vec3(0.98,0.97,0.95)*(1.0-0.1*smoothstep(0.2,0.5,f));
+col += 0.8*moon*exp(-4.0*d)*vec3(1.1,1.0,0.8);
+col += 0.2*moon*exp(-2.0*d);
+moon *= 0.85+0.15*smoothstep(0.25,0.7,fbm(0.05*p+0.3));
+col = mix( col, moon, 1.0-smoothstep(0.2,0.22,d) );
+// postprocess
+col = pow( 1.4*col, vec3(1.5,1.2,1.0) );    
+col *= clamp(1.0-0.3*length(i), 0.0, 1.0 );
+// fade
+col *=       smoothstep( 3.0, 6.0,time);
+col *= 1.0 - smoothstep(44.0,50.0,time);
+fragColor = vec4( col, 1.0 );
+}`,
+      tunnel: `// Buffer A
+/* Shading constants */
+/* --------------------- */
+const vec3 LP = vec3(0, 0, 0);  // light position
+const vec3 LC = vec3(.85,0.80,0.70);    // light colour
+const vec3 HC1 = vec3(.5, .4, .3);      // hemisphere light colour 1
+const vec3 HC2 = vec3(0.1,.1,.6)*.5;    // hemisphere light colour 2
+const vec3 HLD = vec3(0,1,0);           // hemisphere light direction
+const vec3 BC = vec3(0.25,0.25,0.25);   // back light colour
+const vec3 FC = vec3(1.30,1.20,1.00);   // fresnel colour
+const float AS = .5;                    // ambient light strength
+const float DS = 1.;                    // diffuse light strength
+const float BS = .3;                    // back light strength
+const float FS = .3;                    // fresnel strength
+/* Raymarching constants */
+/* --------------------- */
+const float MAX_TRACE_DISTANCE = 50.;             // max trace distance
+const float INTERSECTION_PRECISION = 0.0001;       // precision of the intersection
+const int NUM_OF_TRACE_STEPS = 256;               // max number of trace steps
+const float STEP_MULTIPLIER = 1.;                 // the step mutliplier - ie, how much further to progress on each step
+/* Structures */
+/* ---------- */
+struct Camera {
+vec3 ro;
+vec3 rd;
+vec3 forward;
+vec3 right;
+vec3 up;
+float FOV;
+};
+struct Surface {
+float len;
+vec3 position;
+vec3 colour;
+float id;
+float steps;
+float AO;
+};
+struct Model {
+float dist;
+vec3 colour;
+float id;
+};
+/* RNG */
+/* ---------- */
+// Hash without sine from Dave Hoskins
+// https://www.shadertoy.com/view/4djSRWa
+float hash12(vec2 p) {
+vec3 p3  = fract(vec3(p.xyx) * .1031);
+p3 += dot(p3, p3.yzx + 33.33);
+return fract((p3.x + p3.y) * p3.z);
+}
+vec2 hash22(vec2 p) {
+vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
+p3 += dot(p3, p3.yzx+33.33);
+return fract((p3.xx+p3.yz)*p3.zy);
+}
+/* Utilities */
+/* ---------- */
+vec2 toScreenspace(in vec2 p) {
+vec2 uv = (p - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
+return uv;
+}
+mat2 R(float a) {
+float c = cos(a);
+float s = sin(a);
+return mat2(c, -s, s, c);
+}
+Camera getCamera(in vec2 uv, in vec3 pos, in vec3 target) {
+vec3 f = normalize(target - pos);
+vec3 r = normalize(vec3(f.z, 0., -f.x));
+vec3 u = normalize(cross(f, r));
+float FOV = .6;
+return Camera(
+pos,
+normalize(f + FOV * uv.x * r + FOV * uv.y * u),
+f,
+r,
+u,
+FOV
+);
+}
+// folding from gaz: https://www.shadertoy.com/view/4tX3DS
+vec2 fold(vec2 p, float a) {
+p.x=abs(p.x);
+vec2 n = vec2(cos(a),sin(a));
+for(int i = 0; i < 2; ++i){
+p -= 2.*min(0.,dot(p,n))*n;
+n = normalize(n-vec2(1.,0.));
+}
+return p;
+}
+vec3 path(in float delta) {
+return vec3(
+cos(delta*.1) * 2.2 + sin((delta) * .3) * .5*cos(delta * .05),
+sin(delta * .04) * 5.4+cos(delta * .04) * 5.4,
+delta
+);
+}
+#define PI 3.14159236
+#define SCALE 2.
+//--------------------------------
+// Modelling
+//--------------------------------
+Model model(vec3 p) {
+float d = length(p)-.4;
+p.xy -= path(p.z).xy;
+float m=length(p.xy)*.5;
+float z = p.z;
+float r = cos(z*.2+sin(m)*.3)*.4+.5;
+float r2 = (sin(z*.05124)*cos(z*.025203))+1.;
+p*=SCALE;
+vec3 q=p;
+p=vec3(R(0.05*p.z+r)*p.xy, p.z);
+p.xy=fold(p.xy,PI/6.+z*.2);
+p=mod(p,3.)-1.5;
+vec3 o = abs(p); o-=(o.x+o.y+o.z)*0.33333;
+float d0=max(o.x,max(o.y,o.z))-0.01;
+float d1=length(q.xy)-1.-r2*2.;
+d0=max(d0,-d1);
+d0=max(d0,length(q.xy)-4.-r2*2.);
+d=length( vec2(abs(d0), length(mod(p,vec3(.1))-.05)) )-.3*r;
+vec3 colour = mix(
+mix(vec3(.8,.3,.6), vec3(.3,.9,.9), vec3(cos(z*.1)*.5+.5, sin(z*.12)*.5+.5, cos(z*.05+1.)*.5+.5)),
+vec3(1.,.6,.4)*.1,
+m
+);
+return Model(d/SCALE, colour, 1.);
+}
+Model map( vec3 p ){
+return model(p);
+}
+/* Modelling utilities */
+/* ---------- */
+// I *think* I borrowed this from Shane, but probably orginally comes from IQ. 
+// Calculates the normal by taking a very small distance,
+// remapping the function, and getting normal for that
+vec3 calcNormal( in vec3 pos ){
+vec3 eps = vec3( 0.001, 0.0, 0.0 );
+vec3 nor = vec3(
+map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
+map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
+map(pos+eps.yyx).dist - map(pos-eps.yyx).dist );
+return normalize(nor);
+}
+//--------------------------------
+// Raymarcher
+//--------------------------------
+Surface march( in Camera cam ){
+float h = 1e4; // local distance
+float d = 0.; // ray depth
+float id = -1.; // surace id
+float s = 0.; // number of steps
+float ao = 0.; // march space AO. Simple weighted accumulator. Not really AO, but ¯\\_(ツ)_/¯
+vec3 p; // ray position
+vec3 c; // surface colour
+for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ) {
+if( abs(h) < INTERSECTION_PRECISION || d > MAX_TRACE_DISTANCE ) break;
+p = cam.ro+cam.rd*d;
+Model m = map( p );
+h = m.dist;
+d += h * STEP_MULTIPLIER;
+id = m.id;
+s += 1.;
+ao += max(h, 0.);
+c = m.colour;
+}
+if( d >= MAX_TRACE_DISTANCE ) id = -1.0;
+return Surface( d, p, c, id, s, ao );
+}
+//--------------------------------
+// Shading
+//--------------------------------
+/**
+* Soft shadows and AO curtesy of Inigo Quilez
+* https://iquilezles.org/articles/rmshadows
+*/
+float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax ) {
+float res = 1.0;
+float t = mint;
+for( int i=0; i<16; i++ ) {
+float h = map( ro + rd*t ).dist;
+res = min( res, 8.0*h/t );
+t += clamp( h, 0.02, 0.10 );
+if( h<0.001 || t>tmax ) break;
+}
+return clamp( res, 0.0, 1.0 );
+}
+float AO( in vec3 pos, in vec3 nor ) {
+float occ = 0.0;
+float sca = 1.0;
+for( int i=0; i<5; i++ ){
+float hr = 0.01 + 0.12*float(i)/4.0;
+vec3 aopos =  nor * hr + pos;
+float dd = map( aopos ).dist;
+occ += -(dd-hr)*sca;
+sca *= 0.95;
+}
+return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+}
+vec3 shade(vec3 col, vec3 pos, vec3 nor, vec3 ref, Camera cam) {
+vec3 plp = LP - pos; // point light
+float o = AO( pos, nor );                 // Ambient occlusion
+vec3  l = normalize( plp );                    // light direction
+float d = clamp( dot( nor, l ), 0.0, 1.0 )*DS;   // diffuse component
+float b = clamp( dot( nor, normalize(vec3(-l.x,0,-l.z))), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0)*BS; // back light component
+float f = pow( clamp(1.0+dot(nor,cam.rd),0.0,1.0), 2.0 )*FS; // fresnel component
+vec3 c = vec3(0.0);
+c += d*LC;                           // diffuse light integration
+c += mix(HC1,HC2,dot(nor, HLD))*AS;        // hemisphere light integration (ambient)
+c += b*BC*o;       // back light integration
+c += f*FC*o;       // fresnel integration
+return col*c;
+}
+vec3 render(Surface surface, Camera cam, vec2 uv) {
+vec3 colour = vec3(.04,.045,.05);
+colour = vec3(.1, .0, .3);
+vec3 colourB = vec3(.1, .05, .2);
+vec2 pp = uv;
+colour = mix(colourB, colour, pow(length(pp), 2.)/1.5);
+vec3 bg = colour;
+vec3 surfaceNormal = calcNormal( surface.position );
+vec3 ref = reflect(cam.rd, surfaceNormal);
+colour = surfaceNormal;
+vec3 pos = surface.position;
+vec3 col = surface.colour;
+colour = shade(col, pos, surfaceNormal, ref, cam);
+float sceneLength = length(cam.ro - surface.position);
+float fog = smoothstep(MAX_TRACE_DISTANCE, -3., sceneLength);
+colour = mix(bg, colour, pow(fog, 2.));
+colour *= clamp(1./(surface.steps*.02), .2, 10.);
+return colour;
+}
+void mainImage( out vec4 c, in vec2 f ) {
+vec2 uv = toScreenspace(f.xy);
+float t = iTime*5.;
+vec3 la = path(t+.5);
+Camera cam = getCamera(uv, path(t), la);
+vec2 a = sin(vec2(1.5707963, 0) - path(la.z).x/4.); 
+mat2 rM = mat2(a, -a.y, a.x);
+cam.rd.xy *= rM;
+Surface surface = march(cam);
+vec3 r = render(surface, cam, uv);
+c = texture(iChannel0,f/iResolution.xy)*.8;
+vec4 c2 = vec4(r,1);
+c = clamp(mix(c+c2, c2*2., clamp(surface.len*.03, 0., 1.)), vec4(0.), vec4(1));
+}
+
+// Image
+void mainImage( out vec4 c, in vec2 f ) {
+c = texture(iChannel0,f/iResolution.xy);
+}`,
+      space: `void mainImage(out vec4 o, vec2 u) {
+// Инициализируем i нулем, чтобы избежать мусора в памяти
+float i = 0., a, d, s, t = iTime * 1.3;
+vec3 p = iResolution;
+u = (u + u - p.xy) / p.y;
+float roll = sin(t * .7) * .3 + sin(t * 1.3) * .15 - .785;
+float alt  = sin(t * .4) * .8 + sin(t * .9) * 4.4;
+// Условие на отрисовку рамок (abs(u.y) > .8) удалено
+float c = cos(roll), sn = sin(roll);
+vec2 ru = u * mat2(c, -sn, sn, c);
+// Обнуляем выходной цвет перед циклом
+o = vec4(0.0);
+for( ; i < 128.; i++) {
+p = vec3(ru * d, d + t / .1);
+s = 8. + p.y + p.x + alt;
+for (a = .01; a < 1.; a += a) {
+p += cos(t - p.yzx) * .2;
+s -= abs(dot(sin(t + t - .2 * p.z + .3 * p / a), vec3(a + a)));
+}
+d += s = .1 + abs(s) * .1;
+// Накопление свечения
+o += vec4(4, 2, 1, 0) / s + .1 * vec4(4, 2, 1, 0) / abs(ru.y + ru.x);
+}
+// Финальная постобработка и тонирование
+o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
 }`
     };
     
@@ -778,6 +1134,131 @@ fragColor = vec4( result, 1.0 );
     
     // === Кастомные темы ===
     
+    // Обработчик слайдера прозрачности фона - применять в реальном времени
+    const bgOpacitySlider = panel.querySelector('#itd-custom-bg-opacity');
+    const bgOpacityValue = panel.querySelector('#itd-bg-opacity-value');
+    
+    bgOpacitySlider.addEventListener('input', () => {
+      bgOpacityValue.textContent = bgOpacitySlider.value + '%';
+      
+      // Автоматически применить тему при изменении прозрачности
+      const primary = panel.querySelector('#itd-custom-primary').value;
+      const secondary = panel.querySelector('#itd-custom-secondary').value;
+      const bg = panel.querySelector('#itd-custom-bg').value;
+      const bgOpacity = bgOpacitySlider.value;
+      const gradient = panel.querySelector('#itd-custom-gradient').checked;
+      
+      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+    });
+    
+    // Автоприменение для color picker'ов и градиента
+    const primaryInput = panel.querySelector('#itd-custom-primary');
+    const secondaryInput = panel.querySelector('#itd-custom-secondary');
+    const bgInput = panel.querySelector('#itd-custom-bg');
+    const gradientCheck = panel.querySelector('#itd-custom-gradient');
+    
+    primaryInput.addEventListener('input', () => {
+      const primary = primaryInput.value;
+      const secondary = secondaryInput.value;
+      const bg = bgInput.value;
+      const bgOpacity = bgOpacitySlider.value;
+      const gradient = gradientCheck.checked;
+      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+    });
+    
+    secondaryInput.addEventListener('input', () => {
+      const primary = primaryInput.value;
+      const secondary = secondaryInput.value;
+      const bg = bgInput.value;
+      const bgOpacity = bgOpacitySlider.value;
+      const gradient = gradientCheck.checked;
+      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+    });
+    
+    bgInput.addEventListener('input', () => {
+      const primary = primaryInput.value;
+      const secondary = secondaryInput.value;
+      const bg = bgInput.value;
+      const bgOpacity = bgOpacitySlider.value;
+      const gradient = gradientCheck.checked;
+      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+    });
+    
+    gradientCheck.addEventListener('change', () => {
+      const primary = primaryInput.value;
+      const secondary = secondaryInput.value;
+      const bg = bgInput.value;
+      const bgOpacity = bgOpacitySlider.value;
+      const gradient = gradientCheck.checked;
+      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+    });
+    
+    // Кастомный шрифт - чекбокс и drop zone
+    const customFontCheck = panel.querySelector('#itd-custom-font-enabled');
+    const fontDropZone = panel.querySelector('#itd-font-drop-zone');
+    
+    customFontCheck.addEventListener('change', () => {
+      if (customFontCheck.checked) {
+        fontDropZone.style.display = 'block';
+      } else {
+        fontDropZone.style.display = 'none';
+        clearCustomFont();
+      }
+    });
+    
+    // Загрузить сохраненный шрифт
+    chrome.storage.local.get(['itdCustomFont', 'itdCustomFontName'], (data) => {
+      if (data.itdCustomFont && data.itdCustomFontName) {
+        customFontCheck.checked = true;
+        fontDropZone.style.display = 'block';
+        fontDropZone.querySelector('.itd-font-name').textContent = data.itdCustomFontName;
+        applyCustomFont(data.itdCustomFont, data.itdCustomFontName);
+      }
+    });
+    
+    // Drag & Drop для TTF файлов
+    fontDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fontDropZone.classList.add('drag-over');
+    });
+    
+    fontDropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fontDropZone.classList.remove('drag-over');
+    });
+    
+    fontDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fontDropZone.classList.remove('drag-over');
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+        if (file.name.endsWith('.ttf') || file.name.endsWith('.TTF')) {
+          loadFontFile(file, fontDropZone);
+        } else {
+          alert('Пожалуйста, загрузите TTF файл');
+        }
+      }
+    });
+    
+    // Клик для выбора файла
+    fontDropZone.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.ttf';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          loadFontFile(file, fontDropZone);
+        }
+      };
+      input.click();
+    });
+    
     // Сохранить кастомную тему
     const saveCustomThemeBtn = panel.querySelector('#itd-save-custom-theme');
     saveCustomThemeBtn.addEventListener('click', () => {
@@ -785,6 +1266,7 @@ fragColor = vec4( result, 1.0 );
       const primary = panel.querySelector('#itd-custom-primary').value;
       const secondary = panel.querySelector('#itd-custom-secondary').value;
       const bg = panel.querySelector('#itd-custom-bg').value;
+      const bgOpacity = panel.querySelector('#itd-custom-bg-opacity').value;
       const gradient = panel.querySelector('#itd-custom-gradient').checked;
       
       if (!name) {
@@ -792,7 +1274,7 @@ fragColor = vec4( result, 1.0 );
         return;
       }
       
-      saveCustomTheme(name, primary, secondary, bg, gradient, panel);
+      saveCustomTheme(name, primary, secondary, bg, gradient, bgOpacity, panel);
     });
     
     // Применить кастомную тему
@@ -801,9 +1283,10 @@ fragColor = vec4( result, 1.0 );
       const primary = panel.querySelector('#itd-custom-primary').value;
       const secondary = panel.querySelector('#itd-custom-secondary').value;
       const bg = panel.querySelector('#itd-custom-bg').value;
+      const bgOpacity = panel.querySelector('#itd-custom-bg-opacity').value;
       const gradient = panel.querySelector('#itd-custom-gradient').checked;
       
-      applyCustomTheme(primary, secondary, bg, gradient);
+      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
     });
     
     // Загрузить кастомную тему
@@ -959,7 +1442,7 @@ fragColor = vec4( result, 1.0 );
   // === Функции для кастомных тем ===
   
   // Сохранить кастомную тему
-  function saveCustomTheme(name, primary, secondary, bg, gradient, panel) {
+  function saveCustomTheme(name, primary, secondary, bg, gradient, bgOpacity, panel) {
     chrome.storage.local.get(['itdSavedCustomThemes'], (data) => {
       const savedThemes = data.itdSavedCustomThemes || {};
       const themeId = 'custom_theme_' + Date.now();
@@ -969,6 +1452,7 @@ fragColor = vec4( result, 1.0 );
         primary: primary,
         secondary: secondary,
         bg: bg,
+        bgOpacity: bgOpacity || 80,
         gradient: gradient,
         created: new Date().toISOString()
       };
@@ -1003,18 +1487,22 @@ fragColor = vec4( result, 1.0 );
       const primaryInput = panel.querySelector('#itd-custom-primary');
       const secondaryInput = panel.querySelector('#itd-custom-secondary');
       const bgInput = panel.querySelector('#itd-custom-bg');
+      const bgOpacityInput = panel.querySelector('#itd-custom-bg-opacity');
+      const bgOpacityValue = panel.querySelector('#itd-bg-opacity-value');
       const gradientCheck = panel.querySelector('#itd-custom-gradient');
       
       nameInput.value = theme.name;
       primaryInput.value = theme.primary;
       secondaryInput.value = theme.secondary;
       bgInput.value = theme.bg;
+      bgOpacityInput.value = theme.bgOpacity || 80;
+      bgOpacityValue.textContent = (theme.bgOpacity || 80) + '%';
       gradientCheck.checked = theme.gradient || false;
       
       chrome.storage.local.set({ itdActiveCustomTheme: themeId });
       
       // Применить тему
-      applyCustomTheme(theme.primary, theme.secondary, theme.bg, theme.gradient);
+      applyCustomTheme(theme.primary, theme.secondary, theme.bg, theme.gradient, theme.bgOpacity || 80);
       
       console.log("[ITD Floating Panel] Custom theme loaded:", theme.name);
     });
@@ -1058,8 +1546,11 @@ fragColor = vec4( result, 1.0 );
   }
   
   // Применить кастомную тему
-  function applyCustomTheme(primary, secondary, bg, gradient) {
+  function applyCustomTheme(primary, secondary, bg, gradient, bgOpacity) {
     document.documentElement.setAttribute('data-itd-custom-theme', 'custom');
+    
+    // Преобразовать прозрачность из 0-100 в 0-1
+    let opacity = (bgOpacity || 80) / 100;
     
     // СОХРАНИТЬ параметры кастомной темы для автозагрузки
     chrome.storage.local.set({
@@ -1068,7 +1559,8 @@ fragColor = vec4( result, 1.0 );
         primary,
         secondary,
         bg,
-        gradient
+        gradient,
+        bgOpacity: bgOpacity || 80
       }
     });
     
@@ -1084,12 +1576,12 @@ fragColor = vec4( result, 1.0 );
     
     // Применить градиент или обычный фон
     if (gradient) {
-      const bg1 = bg;
-      const bg2 = adjustBrightness(bg, 15);
-      const bg3 = adjustBrightness(bg, 25);
+      const bg1 = hexToRgba(bg, opacity);
+      const bg2 = hexToRgba(adjustBrightness(bg, 15), opacity);
+      const bg3 = hexToRgba(adjustBrightness(bg, 25), opacity);
       
-      document.documentElement.style.setProperty('--color-background', bg);
-      document.documentElement.style.setProperty('--color-card', cardBg);
+      document.documentElement.style.setProperty('--color-background', bg1);
+      document.documentElement.style.setProperty('--color-card', hexToRgba(cardBg, opacity * 0.9));
       
       // Создать плавную анимацию градиента
       if (!document.getElementById('itd-custom-gradient-style')) {
@@ -1165,11 +1657,29 @@ fragColor = vec4( result, 1.0 );
       
       document.body.style.background = `linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%)`;
       document.body.style.animation = 'customGradient 20s ease-in-out infinite';
+      
+      // Применить к основному контейнеру сайта
+      const layout = document.querySelector('div.layout');
+      if (layout) {
+        layout.style.background = `linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%)`;
+        layout.style.animation = 'customGradient 20s ease-in-out infinite';
+      }
     } else {
-      document.documentElement.style.setProperty('--color-background', bg);
-      document.documentElement.style.setProperty('--color-card', cardBg);
-      document.body.style.background = bg;
+      // Обычный фон
+      const bgWithOpacity = hexToRgba(bg, opacity);
+      const cardBgWithOpacity = hexToRgba(cardBg, opacity * 0.9);
+      
+      document.documentElement.style.setProperty('--color-background', bgWithOpacity);
+      document.documentElement.style.setProperty('--color-card', cardBgWithOpacity);
+      document.body.style.background = bgWithOpacity;
       document.body.style.animation = 'none';
+      
+      // Применить к основному контейнеру сайта
+      const layout = document.querySelector('div.layout');
+      if (layout) {
+        layout.style.background = bgWithOpacity;
+        layout.style.animation = 'none';
+      }
       
       // Удалить стиль градиента
       const gradientStyle = document.getElementById('itd-custom-gradient-style');
@@ -1179,7 +1689,7 @@ fragColor = vec4( result, 1.0 );
     }
     
     updateButtonColors('custom');
-    console.log("[ITD Floating Panel] Applied custom theme", { gradient, textColor });
+    console.log("[ITD Floating Panel] Applied custom theme", { gradient, bgOpacity, textColor });
   }
   
   // Определить контрастный цвет текста (белый или чёрный)
@@ -1270,7 +1780,7 @@ fragColor = vec4( result, 1.0 );
     console.log("[ITD Floating Panel] Button colors updated for theme:", theme);
   }
   
-  // Применить шейдер
+  // Применить шейдер (поддержка multipass как на Shadertoy)
   function applyShader(code) {
     clearShader();
     if (!code) return;
@@ -1293,58 +1803,145 @@ fragColor = vec4( result, 1.0 );
     const isWebGL2 = gl instanceof WebGL2RenderingContext;
     console.log("[ITD Floating Panel] Using", isWebGL2 ? "WebGL 2.0" : "WebGL 1.0");
     
+    // Включить расширения для WebGL 1.0
+    if (!isWebGL2) {
+      gl.getExtension('OES_texture_float');
+      gl.getExtension('OES_texture_float_linear');
+    }
+    
     try {
-      // Создать текстуру шума для iChannel0
+      // Парсинг Shadertoy кода - разделить на Buffer A/B/C/D и Image
+      const shaderParts = parseShadertoyShadersCode(code);
+      console.log("[ITD Floating Panel] Parsed shaders:", Object.keys(shaderParts));
+      
+      // Создать текстуру шума
       const noiseTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
-      
-      // Создать случайные данные 256x256
       const noiseData = new Uint8Array(256 * 256 * 4);
       for (let i = 0; i < noiseData.length; i++) {
         noiseData[i] = Math.random() * 255;
       }
-      
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0, gl.RGBA, gl.UNSIGNED_BYTE, noiseData);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
       
-      const vs = gl.createShader(gl.VERTEX_SHADER);
-      if (isWebGL2) {
-        gl.shaderSource(vs, `#version 300 es
+      // Создать framebuffer
+      function createFramebuffer(width, height) {
+        const fbo = gl.createFramebuffer();
+        const texture = gl.createTexture();
+        
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+        
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+          console.error("[ITD Floating Panel] Framebuffer incomplete");
+        }
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        return { fbo, texture };
+      }
+      
+      // Создать ping-pong буферы для каждого Buffer shader
+      const buffers = {
+        bufferA: shaderParts.bufferA ? {
+          ping: createFramebuffer(canvas.width, canvas.height),
+          pong: createFramebuffer(canvas.width, canvas.height),
+          pingPong: false
+        } : null,
+        bufferB: shaderParts.bufferB ? {
+          ping: createFramebuffer(canvas.width, canvas.height),
+          pong: createFramebuffer(canvas.width, canvas.height),
+          pingPong: false
+        } : null,
+        bufferC: shaderParts.bufferC ? {
+          ping: createFramebuffer(canvas.width, canvas.height),
+          pong: createFramebuffer(canvas.width, canvas.height),
+          pingPong: false
+        } : null,
+        bufferD: shaderParts.bufferD ? {
+          ping: createFramebuffer(canvas.width, canvas.height),
+          pong: createFramebuffer(canvas.width, canvas.height),
+          pingPong: false
+        } : null
+      };
+      
+      // Парсинг Shadertoy кода - извлечь Buffer A/B/C/D и Image
+      function parseShadertoyShadersCode(fullCode) {
+        const result = {
+          bufferA: null,
+          bufferB: null,
+          bufferC: null,
+          bufferD: null,
+          image: null
+        };
+        
+        // Попробовать найти маркеры Buffer A/B/C/D и Image
+        const bufferAMatch = fullCode.match(/\/\/\s*Buffer\s*A\s*\n([\s\S]*?)(?=\/\/\s*(?:Buffer\s*[BCD]|Image)|$)/i);
+        const bufferBMatch = fullCode.match(/\/\/\s*Buffer\s*B\s*\n([\s\S]*?)(?=\/\/\s*(?:Buffer\s*[ACD]|Image)|$)/i);
+        const bufferCMatch = fullCode.match(/\/\/\s*Buffer\s*C\s*\n([\s\S]*?)(?=\/\/\s*(?:Buffer\s*[ABD]|Image)|$)/i);
+        const bufferDMatch = fullCode.match(/\/\/\s*Buffer\s*D\s*\n([\s\S]*?)(?=\/\/\s*(?:Buffer\s*[ABC]|Image)|$)/i);
+        const imageMatch = fullCode.match(/\/\/\s*Image\s*\n([\s\S]*?)$/i);
+        
+        if (bufferAMatch) result.bufferA = bufferAMatch[1].trim();
+        if (bufferBMatch) result.bufferB = bufferBMatch[1].trim();
+        if (bufferCMatch) result.bufferC = bufferCMatch[1].trim();
+        if (bufferDMatch) result.bufferD = bufferDMatch[1].trim();
+        if (imageMatch) result.image = imageMatch[1].trim();
+        
+        // Если нет маркеров - весь код это Image shader
+        if (!result.bufferA && !result.bufferB && !result.bufferC && !result.bufferD && !result.image) {
+          result.image = fullCode.trim();
+        }
+        
+        return result;
+      }
+      
+      // Компилировать шейдер
+      function compileShader(shaderCode, isBufferShader = false) {
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        if (isWebGL2) {
+          gl.shaderSource(vs, `#version 300 es
 in vec2 p;
 void main() {
   gl_Position = vec4(p, 0., 1.);
 }`);
-      } else {
-        gl.shaderSource(vs, `attribute vec2 p;
+        } else {
+          gl.shaderSource(vs, `attribute vec2 p;
 void main() {
   gl_Position = vec4(p, 0., 1.);
 }`);
-      }
-      gl.compileShader(vs);
-      
-      const fs = gl.createShader(gl.FRAGMENT_SHADER);
-      
-      // Обработать код шейдера - поддержка разных форматов Shadertoy
-      let shaderCode = code.trim();
-      
-      // Заменить texture() на texture2D() только для WebGL 1.0
-      if (!isWebGL2) {
-        shaderCode = shaderCode.replace(/\btexture\s*\(/g, 'texture2D(');
-      }
-      
-      // Проверить есть ли уже mainImage функция
-      const hasMainImage = /void\s+mainImage\s*\(/.test(shaderCode);
-      
-      // Если нет mainImage - обернуть код
-      let wrapped;
-      if (hasMainImage) {
-        // Код уже содержит mainImage - добавить только uniforms и main
-        if (isWebGL2) {
-          wrapped = `#version 300 es
-precision mediump float;
+        }
+        gl.compileShader(vs);
+        
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        
+        // Обработать код шейдера
+        let processedCode = shaderCode.trim();
+        
+        // Заменить texture() на texture2D() только для WebGL 1.0
+        if (!isWebGL2) {
+          processedCode = processedCode.replace(/\btexture\s*\(/g, 'texture2D(');
+        }
+        
+        // Проверить есть ли уже mainImage функция
+        const hasMainImage = /void\s+mainImage\s*\(/.test(processedCode);
+        
+        // Если нет mainImage - обернуть код
+        let wrapped;
+        if (hasMainImage) {
+          // Код уже содержит mainImage
+          if (isWebGL2) {
+            wrapped = `#version 300 es
+precision highp float;
 out vec4 fragColor;
 uniform float iTime;
 uniform vec3 iResolution;
@@ -1360,13 +1957,13 @@ uniform sampler2D iChannel1;
 uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
 
-${shaderCode}
+${processedCode}
 
 void main() {
   mainImage(fragColor, gl_FragCoord.xy);
 }`;
-        } else {
-          wrapped = `precision mediump float;
+          } else {
+            wrapped = `precision highp float;
 uniform float iTime;
 uniform vec3 iResolution;
 uniform vec4 iMouse;
@@ -1381,17 +1978,17 @@ uniform sampler2D iChannel1;
 uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
 
-${shaderCode}
+${processedCode}
 
 void main() {
   mainImage(gl_FragColor, gl_FragCoord.xy);
 }`;
-        }
-      } else {
-        // Код без mainImage - обернуть полностью
-        if (isWebGL2) {
-          wrapped = `#version 300 es
-precision mediump float;
+          }
+        } else {
+          // Код без mainImage
+          if (isWebGL2) {
+            wrapped = `#version 300 es
+precision highp float;
 out vec4 fragColor;
 uniform float iTime;
 uniform vec3 iResolution;
@@ -1408,14 +2005,14 @@ uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  ${shaderCode}
+  ${processedCode}
 }
 
 void main() {
   mainImage(fragColor, gl_FragCoord.xy);
 }`;
-        } else {
-          wrapped = `precision mediump float;
+          } else {
+            wrapped = `precision highp float;
 uniform float iTime;
 uniform vec3 iResolution;
 uniform vec4 iMouse;
@@ -1431,113 +2028,82 @@ uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  ${shaderCode}
+  ${processedCode}
 }
 
 void main() {
   mainImage(gl_FragColor, gl_FragCoord.xy);
 }`;
-        }
-      }
-      
-      gl.shaderSource(fs, wrapped);
-      gl.compileShader(fs);
-      
-      if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-        const error = gl.getShaderInfoLog(fs);
-        console.error("[ITD Floating Panel] Shader compilation error:", error);
-        
-        // Показать более понятную ошибку
-        const lines = wrapped.split('\n');
-        const errorMatch = error.match(/ERROR: \d+:(\d+):/);
-        if (errorMatch) {
-          const lineNum = parseInt(errorMatch[1]) - 1;
-          const errorLine = lines[lineNum];
-          console.error(`Line ${lineNum}: ${errorLine}`);
+          }
         }
         
-        alert("Ошибка компиляции шейдера:\n" + error);
-        clearShader();
-        return;
+        gl.shaderSource(fs, wrapped);
+        gl.compileShader(fs);
+        
+        if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+          const error = gl.getShaderInfoLog(fs);
+          console.error("[ITD Floating Panel] Shader compilation error:", error);
+          
+          const lines = wrapped.split('\n');
+          const errorMatch = error.match(/ERROR: \d+:(\d+):/);
+          if (errorMatch) {
+            const lineNum = parseInt(errorMatch[1]) - 1;
+            const errorLine = lines[lineNum];
+            console.error(`Line ${lineNum}: ${errorLine}`);
+          }
+          
+          throw new Error("Shader compilation error:\n" + error);
+        }
+        
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+          throw new Error("Shader link error:\n" + gl.getProgramInfoLog(prog));
+        }
+        
+        return prog;
       }
       
-      const prog = gl.createProgram();
-      gl.attachShader(prog, vs);
-      gl.attachShader(prog, fs);
-      gl.linkProgram(prog);
+      // Компилировать все шейдеры
+      const programs = {
+        bufferA: shaderParts.bufferA ? compileShader(shaderParts.bufferA, true) : null,
+        bufferB: shaderParts.bufferB ? compileShader(shaderParts.bufferB, true) : null,
+        bufferC: shaderParts.bufferC ? compileShader(shaderParts.bufferC, true) : null,
+        bufferD: shaderParts.bufferD ? compileShader(shaderParts.bufferD, true) : null,
+        image: shaderParts.image ? compileShader(shaderParts.image, false) : null
+      };
       
-      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-        console.error("[ITD Floating Panel] Shader link error:", gl.getProgramInfoLog(prog));
-        alert("Ошибка линковки шейдера:\n" + gl.getProgramInfoLog(prog));
-        clearShader();
-        return;
+      if (!programs.image) {
+        throw new Error("No Image shader found!");
       }
       
-      gl.useProgram(prog);
-      
+      // Создать vertex buffer
       const buf = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
       
-      const pos = gl.getAttribLocation(prog, "p");
-      gl.enableVertexAttribArray(pos);
-      gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
-      
-      // Получить все uniform locations
-      const uTime = gl.getUniformLocation(prog, "iTime");
-      const uRes = gl.getUniformLocation(prog, "iResolution");
-      const uMouse = gl.getUniformLocation(prog, "iMouse");
-      const uDate = gl.getUniformLocation(prog, "iDate");
-      const uTimeDelta = gl.getUniformLocation(prog, "iTimeDelta");
-      const uFrame = gl.getUniformLocation(prog, "iFrame");
-      const uChannel0 = gl.getUniformLocation(prog, "iChannel0");
-      const uChannel1 = gl.getUniformLocation(prog, "iChannel1");
-      const uChannel2 = gl.getUniformLocation(prog, "iChannel2");
-      const uChannel3 = gl.getUniformLocation(prog, "iChannel3");
-      
-      // Привязать текстуру шума к iChannel0
-      if (uChannel0) {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
-        gl.uniform1i(uChannel0, 0);
-      }
-      
-      // Привязать ту же текстуру к остальным каналам (если нужны)
-      if (uChannel1) {
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
-        gl.uniform1i(uChannel1, 1);
-      }
-      if (uChannel2) {
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
-        gl.uniform1i(uChannel2, 2);
-      }
-      if (uChannel3) {
-        gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
-        gl.uniform1i(uChannel3, 3);
-      }
-      
-      const start = Date.now();
-      let frame = 0;
-      let lastTime = start;
-      
-      function render() {
-        const shaderCanvas = document.getElementById('itd-shader-canvas');
-        if (!shaderCanvas) return;
+      // Функция для установки uniforms и рендера
+      function renderPass(program, targetFBO, time, timeDelta, frame, channelTextures) {
+        gl.useProgram(program);
         
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        gl.viewport(0, 0, canvas.width, canvas.height);
+        const pos = gl.getAttribLocation(program, "p");
+        gl.enableVertexAttribArray(pos);
+        gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
         
-        const now = Date.now();
-        const time = (now - start) / 1000;
-        const timeDelta = (now - lastTime) / 1000;
-        lastTime = now;
-        frame++;
+        const uTime = gl.getUniformLocation(program, "iTime");
+        const uRes = gl.getUniformLocation(program, "iResolution");
+        const uMouse = gl.getUniformLocation(program, "iMouse");
+        const uDate = gl.getUniformLocation(program, "iDate");
+        const uTimeDelta = gl.getUniformLocation(program, "iTimeDelta");
+        const uFrame = gl.getUniformLocation(program, "iFrame");
+        const uChannel0 = gl.getUniformLocation(program, "iChannel0");
+        const uChannel1 = gl.getUniformLocation(program, "iChannel1");
+        const uChannel2 = gl.getUniformLocation(program, "iChannel2");
+        const uChannel3 = gl.getUniformLocation(program, "iChannel3");
         
-        // Установить uniforms
         if (uTime) gl.uniform1f(uTime, time);
         if (uRes) gl.uniform3f(uRes, canvas.width, canvas.height, 1);
         if (uMouse) gl.uniform4f(uMouse, 0, 0, 0, 0);
@@ -1553,12 +2119,139 @@ void main() {
         if (uTimeDelta) gl.uniform1f(uTimeDelta, timeDelta);
         if (uFrame) gl.uniform1i(uFrame, frame);
         
+        // Привязать текстуры к каналам
+        if (uChannel0 && channelTextures[0]) {
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, channelTextures[0]);
+          gl.uniform1i(uChannel0, 0);
+        }
+        if (uChannel1 && channelTextures[1]) {
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, channelTextures[1]);
+          gl.uniform1i(uChannel1, 1);
+        }
+        if (uChannel2 && channelTextures[2]) {
+          gl.activeTexture(gl.TEXTURE2);
+          gl.bindTexture(gl.TEXTURE_2D, channelTextures[2]);
+          gl.uniform1i(uChannel2, 2);
+        }
+        if (uChannel3 && channelTextures[3]) {
+          gl.activeTexture(gl.TEXTURE3);
+          gl.bindTexture(gl.TEXTURE_2D, channelTextures[3]);
+          gl.uniform1i(uChannel3, 3);
+        }
+        
+        // Рендер в target
+        gl.bindFramebuffer(gl.FRAMEBUFFER, targetFBO);
+        gl.viewport(0, 0, canvas.width, canvas.height);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+      
+      const start = Date.now();
+      let frame = 0;
+      let lastTime = start;
+      
+      function render() {
+        const shaderCanvas = document.getElementById('itd-shader-canvas');
+        if (!shaderCanvas) return;
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        const now = Date.now();
+        const time = (now - start) / 1000;
+        const timeDelta = (now - lastTime) / 1000;
+        lastTime = now;
+        frame++;
+        
+        // Рендер Buffer A (если есть)
+        if (programs.bufferA && buffers.bufferA) {
+          const current = buffers.bufferA.pingPong ? buffers.bufferA.pong : buffers.bufferA.ping;
+          const previous = buffers.bufferA.pingPong ? buffers.bufferA.ping : buffers.bufferA.pong;
+          
+          // Buffer A: iChannel0 = предыдущий кадр Buffer A, остальные = noise
+          renderPass(programs.bufferA, current.fbo, time, timeDelta, frame, [
+            previous.texture,
+            noiseTexture,
+            noiseTexture,
+            noiseTexture
+          ]);
+          
+          buffers.bufferA.pingPong = !buffers.bufferA.pingPong;
+        }
+        
+        // Рендер Buffer B (если есть)
+        if (programs.bufferB && buffers.bufferB) {
+          const current = buffers.bufferB.pingPong ? buffers.bufferB.pong : buffers.bufferB.ping;
+          const previous = buffers.bufferB.pingPong ? buffers.bufferB.ping : buffers.bufferB.pong;
+          
+          renderPass(programs.bufferB, current.fbo, time, timeDelta, frame, [
+            previous.texture,
+            noiseTexture,
+            noiseTexture,
+            noiseTexture
+          ]);
+          
+          buffers.bufferB.pingPong = !buffers.bufferB.pingPong;
+        }
+        
+        // Рендер Buffer C (если есть)
+        if (programs.bufferC && buffers.bufferC) {
+          const current = buffers.bufferC.pingPong ? buffers.bufferC.pong : buffers.bufferC.ping;
+          const previous = buffers.bufferC.pingPong ? buffers.bufferC.ping : buffers.bufferC.pong;
+          
+          renderPass(programs.bufferC, current.fbo, time, timeDelta, frame, [
+            previous.texture,
+            noiseTexture,
+            noiseTexture,
+            noiseTexture
+          ]);
+          
+          buffers.bufferC.pingPong = !buffers.bufferC.pingPong;
+        }
+        
+        // Рендер Buffer D (если есть)
+        if (programs.bufferD && buffers.bufferD) {
+          const current = buffers.bufferD.pingPong ? buffers.bufferD.pong : buffers.bufferD.ping;
+          const previous = buffers.bufferD.pingPong ? buffers.bufferD.ping : buffers.bufferD.pong;
+          
+          renderPass(programs.bufferD, current.fbo, time, timeDelta, frame, [
+            previous.texture,
+            noiseTexture,
+            noiseTexture,
+            noiseTexture
+          ]);
+          
+          buffers.bufferD.pingPong = !buffers.bufferD.pingPong;
+        }
+        
+        // Рендер финального Image на экран
+        // iChannel0 = Buffer A, iChannel1 = Buffer B, iChannel2 = Buffer C, iChannel3 = Buffer D (или noise)
+        const bufferATexture = buffers.bufferA ? 
+          (buffers.bufferA.pingPong ? buffers.bufferA.pong.texture : buffers.bufferA.ping.texture) : 
+          noiseTexture;
+        const bufferBTexture = buffers.bufferB ? 
+          (buffers.bufferB.pingPong ? buffers.bufferB.pong.texture : buffers.bufferB.ping.texture) : 
+          noiseTexture;
+        const bufferCTexture = buffers.bufferC ? 
+          (buffers.bufferC.pingPong ? buffers.bufferC.pong.texture : buffers.bufferC.ping.texture) : 
+          noiseTexture;
+        const bufferDTexture = buffers.bufferD ? 
+          (buffers.bufferD.pingPong ? buffers.bufferD.pong.texture : buffers.bufferD.ping.texture) : 
+          noiseTexture;
+        
+        renderPass(programs.image, null, time, timeDelta, frame, [
+          bufferATexture,
+          bufferBTexture,
+          bufferCTexture,
+          bufferDTexture
+        ]);
+        
         requestAnimationFrame(render);
       }
       
       render();
-      console.log("[ITD Floating Panel] Shader applied successfully");
+      console.log("[ITD Floating Panel] Multipass shader applied successfully");
     } catch (err) {
       console.error("[ITD Floating Panel] Shader error:", err);
       alert("Ошибка шейдера: " + err.message);
@@ -1943,7 +2636,7 @@ void main() {
   // Инициализация
   function init() {
     // Загрузить и применить сохранённую тему сразу
-    chrome.storage.local.get(['itdCustomTheme', 'itdLastCustomThemeParams', 'itdAutoTheme', 'itdShaderCode', 'itdAutoShader'], (data) => {
+    chrome.storage.local.get(['itdCustomTheme', 'itdLastCustomThemeParams', 'itdAutoTheme', 'itdShaderCode', 'itdAutoShader', 'itdCustomFont', 'itdCustomFontName'], (data) => {
       // Применить тему если автозапуск включен
       const autoTheme = data.itdAutoTheme !== undefined ? data.itdAutoTheme : true;
       if (autoTheme && data.itdCustomTheme) {
@@ -1953,11 +2646,17 @@ void main() {
         if (data.itdCustomTheme === 'custom' && data.itdLastCustomThemeParams) {
           const params = data.itdLastCustomThemeParams;
           console.log("[ITD Floating Panel] Applying custom theme with params:", params);
-          applyCustomTheme(params.primary, params.secondary, params.bg, params.gradient);
+          applyCustomTheme(params.primary, params.secondary, params.bg, params.gradient, params.bgOpacity);
         } else {
           // Обычная тема
           applyTheme(data.itdCustomTheme);
         }
+      }
+      
+      // Применить кастомный шрифт если сохранен
+      if (data.itdCustomFont && data.itdCustomFontName) {
+        console.log("[ITD Floating Panel] Auto-applying custom font:", data.itdCustomFontName);
+        applyCustomFont(data.itdCustomFont, data.itdCustomFontName);
       }
       
       // Применить шейдер если автозапуск включен
@@ -1992,3 +2691,69 @@ void main() {
     console.log("[ITD Floating Panel] Could not notify background worker:", err.message);
   }
 })();
+
+
+// === Функции для работы с кастомными шрифтами ===
+
+function loadFontFile(file, dropZone) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const fontData = e.target.result;
+    const fontName = file.name.replace('.ttf', '').replace('.TTF', '');
+    
+    // Сохранить шрифт в storage
+    chrome.storage.local.set({
+      itdCustomFont: fontData,
+      itdCustomFontName: fontName
+    }, () => {
+      console.log('[ITD Floating Panel] Font saved:', fontName);
+      dropZone.querySelector('.itd-font-name').textContent = fontName;
+      applyCustomFont(fontData, fontName);
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyCustomFont(fontData, fontName) {
+  // Удалить старый стиль если есть
+  const oldStyle = document.getElementById('itd-custom-font-style');
+  if (oldStyle) {
+    oldStyle.remove();
+  }
+  
+  // Создать новый @font-face
+  const style = document.createElement('style');
+  style.id = 'itd-custom-font-style';
+  style.textContent = `
+    @font-face {
+      font-family: 'ITDCustomFont';
+      src: url('${fontData}') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    /* Применить ко всему сайту */
+    body, body * {
+      font-family: 'ITDCustomFont', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+    
+    /* Сохранить моноширинные шрифты для кода */
+    code, pre, textarea, input[type="text"], input[type="password"] {
+      font-family: 'ITDCustomFont', 'Courier New', monospace !important;
+    }
+  `;
+  
+  document.head.appendChild(style);
+  console.log('[ITD Floating Panel] Custom font applied:', fontName);
+}
+
+function clearCustomFont() {
+  const style = document.getElementById('itd-custom-font-style');
+  if (style) {
+    style.remove();
+  }
+  
+  chrome.storage.local.remove(['itdCustomFont', 'itdCustomFontName'], () => {
+    console.log('[ITD Floating Panel] Custom font cleared');
+  });
+}

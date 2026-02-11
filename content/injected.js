@@ -8,29 +8,36 @@
   
   console.log('[ITD INJECTED] Script loaded, installing interceptors...');
   
-  // Слушать событие от content script с данными GIF
+  // Слушать событие от content script с данными GIF/MP4
   window.addEventListener('ITD_GIF_UPLOAD', async function(event) {
-    console.log('[ITD INJECTED] ========== RECEIVED GIF DATA ==========');
+    console.log('[ITD INJECTED] ========== RECEIVED FILE DATA ==========');
     console.log('[ITD INJECTED] Event detail:', event.detail);
     
-    const { gifData, gifSize, gifType } = event.detail;
+    const { gifData, gifSize, gifType, fileName } = event.detail;
     
     // Конвертировать base64 обратно в Blob
     const response = await fetch(gifData);
-    const gifBlob = await response.blob();
+    const fileBlob = await response.blob();
     
-    console.log('[ITD INJECTED] GIF Blob restored:', {
-      type: gifBlob.type,
-      size: gifBlob.size,
-      sizeKB: Math.round(gifBlob.size / 1024)
+    const fileSizeKB = Math.round(fileBlob.size / 1024);
+    const fileSizeMB = (fileBlob.size / (1024 * 1024)).toFixed(2);
+    
+    console.log('[ITD INJECTED] File Blob restored:', {
+      type: fileBlob.type,
+      size: fileBlob.size,
+      sizeKB: fileSizeKB,
+      sizeMB: fileSizeMB,
+      fileName: fileName
     });
     
     // Установить флаги в контексте страницы
     window.__itdForceGifUpload = true;
-    window.__itdGifBlob = gifBlob;
+    window.__itdGifBlob = fileBlob;
+    window.__itdFileName = fileName || 'banner.gif';
     
     console.log('[ITD INJECTED] Flags set in page context!');
     console.log('[ITD INJECTED] Ready to intercept upload...');
+    console.log('[ITD INJECTED] File size:', fileSizeMB, 'MB');
   });
   
   // Сохранить оригинальный fetch ДО того как сайт его обернёт
@@ -91,9 +98,10 @@
             }
           }
           
-          // Добавить GIF файл
-          newFormData.append('file', gifBlob, 'banner.gif');
-          console.log('  Added: file (GIF)', Math.round(gifBlob.size / 1024), 'KB');
+          // Добавить GIF/MP4 файл
+          const fileName = window.__itdFileName || 'banner.gif';
+          newFormData.append('file', gifBlob, fileName);
+          console.log('  Added: file (' + fileName + ')', Math.round(gifBlob.size / 1024), 'KB');
           
           // Показать финальный FormData
           console.log('[ITD INJECTED] Final FormData:');
@@ -147,13 +155,14 @@
       });
     }
     
-    // Если это поле "file" и включен режим GIF
+    // Если это поле "file" и включен режим GIF/MP4
     if (name === 'file' && window.__itdForceGifUpload && window.__itdGifBlob) {
       console.log('[ITD INJECTED] ========== INTERCEPTED FormData.append ==========');
-      console.log('[ITD INJECTED] Replacing with GIF');
+      console.log('[ITD INJECTED] Replacing with animated file');
       
       const gifBlob = window.__itdGifBlob;
-      return OriginalFormDataAppend.call(this, name, gifBlob, 'banner.gif');
+      const fileName = window.__itdFileName || 'banner.gif';
+      return OriginalFormDataAppend.call(this, name, gifBlob, fileName);
     }
     
     // Обычное добавление

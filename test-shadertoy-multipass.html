@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Тест Shadertoy Multipass</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    
+    #shader-code {
+      width: 100%;
+      height: 400px;
+      font-family: 'Courier New', monospace;
+      background: #2a2a2a;
+      color: #0f0;
+      border: 1px solid #444;
+      padding: 10px;
+      font-size: 12px;
+    }
+    
+    button {
+      margin: 10px 5px;
+      padding: 10px 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button:hover {
+      background: #45a049;
+    }
+    
+    .info {
+      margin: 20px 0;
+      padding: 10px;
+      background: #2a2a2a;
+      border-left: 4px solid #4CAF50;
+    }
+    
+    .example {
+      background: #333;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Тест Shadertoy Multipass Rendering</h1>
+  
+  <div class="info">
+    <strong>Формат кода:</strong>
+    <div class="example">
+      <pre>// Buffer A
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    // Код Buffer A
+}
+
+// Image
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    // Код Image
+}</pre>
+    </div>
+    
+    <strong>Как работает:</strong>
+    <ul>
+      <li>Buffer A рендерится в framebuffer с ping-pong (iChannel0 = предыдущий кадр)</li>
+      <li>Image рендерится на экран (iChannel0 = Buffer A, iChannel1 = Buffer B, и т.д.)</li>
+      <li>Поддерживаются Buffer A, B, C, D</li>
+      <li>Если нет маркеров - весь код считается Image shader</li>
+    </ul>
+  </div>
+  
+  <textarea id="shader-code" placeholder="Вставьте код шейдера здесь...">// Buffer A - накапливает данные с temporal reprojection
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    
+    // Получить предыдущий кадр
+    vec4 prev = texture(iChannel0, uv);
+    
+    // Добавить анимированный градиент
+    float t = iTime * 0.5;
+    vec3 col = vec3(
+        0.5 + 0.5 * sin(uv.x * 10.0 + t),
+        0.5 + 0.5 * sin(uv.y * 10.0 + t * 1.3),
+        0.5 + 0.5 * sin((uv.x + uv.y) * 5.0 + t * 0.7)
+    );
+    
+    // Смешать с предыдущим кадром (motion blur)
+    col = mix(prev.rgb, col, 0.1);
+    
+    fragColor = vec4(col, 1.0);
+}
+
+// Image - финальный рендер
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    
+    // Получить данные из Buffer A
+    vec3 col = texture(iChannel0, uv).rgb;
+    
+    // Добавить виньетку
+    float vignette = 1.0 - length(uv - 0.5) * 0.8;
+    col *= vignette;
+    
+    fragColor = vec4(col, 1.0);
+}</textarea>
+  
+  <div>
+    <button onclick="loadExample1()">Пример 1: Motion Blur</button>
+    <button onclick="loadExample2()">Пример 2: Простой шейдер (без буферов)</button>
+    <button onclick="loadExample3()">Пример 3: Ваш landscape shader</button>
+  </div>
+  
+  <script>
+    function loadExample1() {
+      document.getElementById('shader-code').value = `// Buffer A - накапливает данные с temporal reprojection
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    
+    // Получить предыдущий кадр
+    vec4 prev = texture(iChannel0, uv);
+    
+    // Добавить анимированный градиент
+    float t = iTime * 0.5;
+    vec3 col = vec3(
+        0.5 + 0.5 * sin(uv.x * 10.0 + t),
+        0.5 + 0.5 * sin(uv.y * 10.0 + t * 1.3),
+        0.5 + 0.5 * sin((uv.x + uv.y) * 5.0 + t * 0.7)
+    );
+    
+    // Смешать с предыдущим кадром (motion blur)
+    col = mix(prev.rgb, col, 0.1);
+    
+    fragColor = vec4(col, 1.0);
+}
+
+// Image - финальный рендер
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    
+    // Получить данные из Buffer A
+    vec3 col = texture(iChannel0, uv).rgb;
+    
+    // Добавить виньетку
+    float vignette = 1.0 - length(uv - 0.5) * 0.8;
+    col *= vignette;
+    
+    fragColor = vec4(col, 1.0);
+}`;
+    }
+    
+    function loadExample2() {
+      document.getElementById('shader-code').value = `// Простой шейдер без буферов
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    vec3 col = vec3(uv.x, uv.y, 0.5 + 0.5 * sin(iTime));
+    fragColor = vec4(col, 1.0);
+}`;
+    }
+    
+    function loadExample3() {
+      document.getElementById('shader-code').value = `// Вставьте сюда код из вкладки Buffer A на Shadertoy
+// Buffer A
+// ... ваш код Buffer A ...
+
+// Вставьте сюда код из вкладки Image на Shadertoy
+// Image
+// ... ваш код Image ...`;
+    }
+  </script>
+</body>
+</html>
