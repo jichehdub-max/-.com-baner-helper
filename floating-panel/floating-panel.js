@@ -1283,12 +1283,15 @@ fragColor = vec4( result, 1.0 );
     canvas.height = window.innerHeight;
     document.body.appendChild(canvas);
     
-    const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     if (!gl) {
       console.error("[ITD Floating Panel] WebGL not supported");
       alert("WebGL не поддерживается в вашем браузере");
       return;
     }
+    
+    const isWebGL2 = gl instanceof WebGL2RenderingContext;
+    console.log("[ITD Floating Panel] Using", isWebGL2 ? "WebGL 2.0" : "WebGL 1.0");
     
     try {
       // Создать текстуру шума для iChannel0
@@ -1316,8 +1319,10 @@ fragColor = vec4( result, 1.0 );
       // Обработать код шейдера - поддержка разных форматов Shadertoy
       let shaderCode = code.trim();
       
-      // Заменить texture() на texture2D() для WebGL 1.0
-      shaderCode = shaderCode.replace(/\btexture\s*\(/g, 'texture2D(');
+      // Заменить texture() на texture2D() только для WebGL 1.0
+      if (!isWebGL2) {
+        shaderCode = shaderCode.replace(/\btexture\s*\(/g, 'texture2D(');
+      }
       
       // Проверить есть ли уже mainImage функция
       const hasMainImage = /void\s+mainImage\s*\(/.test(shaderCode);
@@ -1327,7 +1332,9 @@ fragColor = vec4( result, 1.0 );
       if (hasMainImage) {
         // Код уже содержит mainImage - добавить только uniforms и main
         wrapped = `
+          ${isWebGL2 ? '#version 300 es' : ''}
           precision mediump float;
+          ${isWebGL2 ? 'out vec4 fragColor;' : ''}
           uniform float iTime;
           uniform vec3 iResolution;
           uniform vec4 iMouse;
@@ -1342,6 +1349,7 @@ fragColor = vec4( result, 1.0 );
           uniform sampler2D iChannel2;
           uniform sampler2D iChannel3;
           
+          ${!isWebGL2 ? `
           // Полифиллы для GLSL ES 1.0
           #define min(a,b) ((a)<(b)?(a):(b))
           #define max(a,b) ((a)>(b)?(a):(b))
@@ -1349,17 +1357,20 @@ fragColor = vec4( result, 1.0 );
           #define mix(x,y,a) ((x)*(1.0-(a))+(y)*(a))
           #define fract(x) ((x)-floor(x))
           #define mod(x,y) ((x)-(y)*floor((x)/(y)))
+          ` : ''}
           
           ${shaderCode}
           
           void main() {
-            mainImage(gl_FragColor, gl_FragCoord.xy);
+            ${isWebGL2 ? 'mainImage(fragColor, gl_FragCoord.xy);' : 'mainImage(gl_FragColor, gl_FragCoord.xy);'}
           }
         `;
       } else {
         // Код без mainImage - обернуть полностью
         wrapped = `
+          ${isWebGL2 ? '#version 300 es' : ''}
           precision mediump float;
+          ${isWebGL2 ? 'out vec4 fragColor;' : ''}
           uniform float iTime;
           uniform vec3 iResolution;
           uniform vec4 iMouse;
@@ -1374,6 +1385,7 @@ fragColor = vec4( result, 1.0 );
           uniform sampler2D iChannel2;
           uniform sampler2D iChannel3;
           
+          ${!isWebGL2 ? `
           // Полифиллы для GLSL ES 1.0
           #define min(a,b) ((a)<(b)?(a):(b))
           #define max(a,b) ((a)>(b)?(a):(b))
@@ -1381,13 +1393,14 @@ fragColor = vec4( result, 1.0 );
           #define mix(x,y,a) ((x)*(1.0-(a))+(y)*(a))
           #define fract(x) ((x)-floor(x))
           #define mod(x,y) ((x)-(y)*floor((x)/(y)))
+          ` : ''}
           
           void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             ${shaderCode}
           }
           
           void main() {
-            mainImage(gl_FragColor, gl_FragCoord.xy);
+            ${isWebGL2 ? 'mainImage(fragColor, gl_FragCoord.xy);' : 'mainImage(gl_FragColor, gl_FragCoord.xy);'}
           }
         `;
       }
