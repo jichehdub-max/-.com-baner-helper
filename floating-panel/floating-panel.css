@@ -1,4 +1,4 @@
-/* Плавающая панель кнопок */
+/* ========== ВЕРТИКАЛЬНАЯ ПАНЕЛЬ НАВИГАЦИИ (СТИЛЬ ИТД.COM) ========== */
 
 :root {
   --itd-theme-primary: #667eea;
@@ -7,9 +7,9 @@
 
 #itd-floating-panel {
   position: fixed;
-  bottom: 50%;
-  right: 20px;
-  transform: translateY(50%);
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 999997;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -17,14 +17,86 @@
 .itd-floating-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(20, 20, 25, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  transition: background 0.3s ease;
+  gap: 20px;
+  padding: 20px 12px;
+  background: rgba(18, 18, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 40px;
+  backdrop-filter: blur(20px);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.itd-float-btn {
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(40, 40, 45, 0.6);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.itd-float-btn svg {
+  width: 24px;
+  height: 24px;
+  transition: all 0.3s ease;
+}
+
+.itd-float-btn:hover {
+  background: rgba(60, 60, 70, 0.8);
+  color: rgba(255, 255, 255, 0.9);
+  transform: scale(1.08);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.itd-float-btn:hover svg {
+  transform: scale(1.1);
+}
+
+.itd-float-btn:active {
+  transform: scale(1.02);
+}
+
+.itd-float-btn.active {
+  background: linear-gradient(135deg, var(--itd-theme-primary) 0%, var(--itd-theme-secondary) 100%);
+  color: #ffffff;
+  box-shadow: 
+    0 0 24px rgba(102, 126, 234, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.itd-float-btn.active svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Анимация пульсации для активной кнопки */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 24px rgba(102, 126, 234, 0.5),
+      0 4px 16px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 0 32px rgba(102, 126, 234, 0.7),
+      0 6px 20px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
 }
 
 /* Цвет фона кнопок в зависимости от темы */
