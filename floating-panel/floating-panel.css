@@ -7,8 +7,8 @@
 
 #itd-floating-panel {
   position: fixed;
-  left: 20px;
-  top: 180px; /* Ниже вкладок сайта */
+  left: 598px; /* Еще ближе к ленте */
+  top: 450px;
   z-index: 999997;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
