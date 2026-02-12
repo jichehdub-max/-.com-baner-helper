@@ -8,8 +8,7 @@
 #itd-floating-panel {
   position: fixed;
   left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 180px; /* Ниже вкладок сайта */
   z-index: 999997;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -19,32 +18,29 @@
   flex-direction: column;
   gap: 20px;
   padding: 20px 12px;
-  background: rgba(18, 18, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 18, 20, 0.6); /* Полупрозрачный фон */
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 40px;
   backdrop-filter: blur(20px);
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transition: all 0.3s ease;
 }
 
 .itd-float-btn {
   width: 52px;
   height: 52px;
-  border: none;
+  border: none; /* Убрать обводку */
   border-radius: 50%;
-  background: rgba(40, 40, 45, 0.6);
-  color: rgba(255, 255, 255, 0.5);
+  background: transparent; /* Прозрачный фон для неактивных */
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .itd-float-btn svg {
@@ -54,12 +50,9 @@
 }
 
 .itd-float-btn:hover {
-  background: rgba(60, 60, 70, 0.8);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(60, 60, 70, 0.4);
+  color: rgba(255, 255, 255, 0.8);
   transform: scale(1.08);
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .itd-float-btn:hover svg {
@@ -70,9 +63,11 @@
   transform: scale(1.02);
 }
 
+/* Активная кнопка - с обводкой и ярким фоном */
 .itd-float-btn.active {
   background: linear-gradient(135deg, var(--itd-theme-primary) 0%, var(--itd-theme-secondary) 100%);
   color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.3); /* Обводка только у активной */
   box-shadow: 
     0 0 24px rgba(102, 126, 234, 0.5),
     0 4px 16px rgba(0, 0, 0, 0.3),
