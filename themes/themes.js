@@ -234,35 +234,13 @@
       const css = `
         /* Основной контейнер сайта итд.com */
         div.layout {
-          background: linear-gradient(135deg, ${this.hexToRgba(theme.colors.primary, 0.08)}, ${this.hexToRgba(theme.colors.secondary, 0.05)}) !important;
+          background: ${theme.colors.primary} !important;
           position: relative !important;
-        }
-        
-        /* Декоративный overlay поверх layout */
-        div.layout::before {
-          content: "" !important;
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          bottom: 0 !important;
-          background: 
-            radial-gradient(circle at 20% 30%, ${this.hexToRgba(theme.colors.primary, 0.15)}, transparent 50%),
-            radial-gradient(circle at 80% 70%, ${this.hexToRgba(theme.colors.secondary, 0.12)}, transparent 50%) !important;
-          pointer-events: none !important;
-          z-index: 0 !important;
-          mix-blend-mode: screen !important;
-        }
-        
-        /* Контент поверх overlay */
-        div.layout > * {
-          position: relative !important;
-          z-index: 1 !important;
         }
         
         /* Body фон */
         body {
-          background: linear-gradient(180deg, ${this.hexToRgba(theme.colors.primary, 0.03)}, ${this.hexToRgba(theme.colors.secondary, 0.02)}) !important;
+          background: ${theme.colors.secondary} !important;
         }
         
         /* Toast контейнер */
@@ -273,24 +251,60 @@
         /* Элементы расширения */
         #itd-redraw-target {
           border-color: ${theme.colors.border} !important;
-          background: linear-gradient(160deg, ${this.hexToRgba(theme.colors.primary, 0.11)}, ${this.hexToRgba(theme.colors.secondary, 0.09)}) !important;
+          background: ${theme.colors.primary} !important;
         }
         
         #itd-redraw-badge {
           color: ${theme.colors.text} !important;
-          background: linear-gradient(150deg, ${this.hexToRgba(theme.colors.primary, 0.2)} 0%, ${this.hexToRgba(theme.colors.secondary, 0.1)} 45%, ${this.hexToRgba(theme.colors.secondary, 0.18)} 100%), ${theme.colors.background} !important;
-          border-color: ${theme.colors.border} !important;
+        }
+        
+        /* Кнопки вкладок профиля - сделать менее прозрачными */
+        button.profile-tab {
+          opacity: 1 !important;
+          background: rgba(45, 48, 52, 0.8) !important;
+        }
+        
+        button.profile-tab.active {
+          opacity: 1 !important;
+          background: rgba(45, 48, 52, 1) !important;
+        }
+        
+        button.profile-tab:hover {
+          opacity: 1 !important;
+          background: rgba(55, 58, 62, 0.9) !important;
+        }
+        
+        /* SVG иконки на сайте - всегда непрозрачные */
+        svg {
+          opacity: 1 !important;
+        }
+        
+        svg path,
+        svg circle,
+        svg rect,
+        svg line,
+        svg polyline,
+        svg polygon {
+          opacity: 1 !important;
+        }
+        
+        /* Иконки в sidebar */
+        .sidebar-nav-item svg,
+        .sidebar-logo svg,
+        a svg,
+        button svg {
+          opacity: 1 !important;
         }
         
         #itd-redraw-toast {
           color: ${theme.colors.text} !important;
-          background: linear-gradient(150deg, ${this.hexToRgba(theme.colors.primary, 0.23)}, ${this.hexToRgba(theme.colors.secondary, 0.14)}), ${theme.colors.background} !important;
+          background: ${theme.colors.background} !important;
           border-color: ${theme.colors.border} !important;
         }
         
         #itd-redraw-select-box {
-          border-color: ${this.hexToRgba(theme.colors.primary, 0.95)} !important;
-          background: linear-gradient(145deg, ${this.hexToRgba(theme.colors.primary, 0.22)}, ${this.hexToRgba(theme.colors.secondary, 0.16)}) !important;
+          border-color: ${theme.colors.primary} !important;
+          background: ${theme.colors.secondary} !important;
         }
       `;
       
@@ -359,11 +373,32 @@
       console.log("[ITD Themes] Shader canvas created:", this.shaderCanvas.width, "x", this.shaderCanvas.height);
       console.log("[ITD Themes] Canvas appended to:", target.tagName);
       
+      // Проверка WebGL с детальной диагностикой
+      const testCanvas = document.createElement("canvas");
+      const testGl = testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
+      
+      if (!testGl) {
+        console.error("[ITD Themes] WebGL not supported");
+        this.shaderCanvas.remove();
+        return;
+      }
+      
+      // Проверка аппаратного ускорения
+      const debugInfo = testGl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const renderer = testGl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        console.log("[ITD Themes] GPU:", renderer);
+        
+        if (renderer.includes('SwiftShader') || renderer.includes('Software')) {
+          console.warn("[ITD Themes] Software rendering detected - shaders may not work properly");
+        }
+      }
+      
       const gl = this.shaderCanvas.getContext("webgl", { alpha: true, premultipliedAlpha: false }) 
                  || this.shaderCanvas.getContext("experimental-webgl", { alpha: true, premultipliedAlpha: false });
       
       if (!gl) {
-        console.error("[ITD Themes] WebGL not supported");
+        console.error("[ITD Themes] WebGL context creation failed");
         this.shaderCanvas.remove();
         return;
       }
@@ -491,6 +526,14 @@
   console.log("[ITD Themes] Creating ThemeSystem instance...");
   const themeSystem = new ThemeSystem();
   window.itdThemeSystem = themeSystem;
+  
+  // Создать алиас для совместимости с popup.js
+  window.itdThemes = {
+    setTheme: (theme) => themeSystem.setActiveTheme(theme),
+    getTheme: () => themeSystem.activeTheme,
+    setShader: (shader) => themeSystem.setShader(shader),
+    clearShader: () => themeSystem.clearShader()
+  };
   
   console.log("[ITD Themes] ThemeSystem instance created, starting init...");
   

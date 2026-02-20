@@ -38,16 +38,22 @@ console.log("[ITD Floating Panel] Script starting...");
     
     const container = document.createElement('div');
     container.id = 'itd-floating-panel';
+    
+    // Устанавливаем позицию прямо в JS для гарантии
+    container.style.position = 'fixed';
+    container.style.left = '0px';
+    container.style.top = '41.67vh';
+    container.style.zIndex = '999997';
     container.innerHTML = `
       <div class="itd-floating-buttons">
         <button class="itd-float-btn" data-panel="themes" title="Темы">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
           </svg>
         </button>
         
         <button class="itd-float-btn" data-panel="ai" title="AI Генератор">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
             <line x1="12" y1="22.08" x2="12" y2="12"/>
@@ -55,7 +61,7 @@ console.log("[ITD Floating Panel] Script starting...");
         </button>
         
         <button class="itd-float-btn" data-panel="banner" title="Баннер хелпер">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
             <circle cx="8.5" cy="8.5" r="1.5"/>
             <polyline points="21 15 16 10 5 21"/>
@@ -63,14 +69,14 @@ console.log("[ITD Floating Panel] Script starting...");
         </button>
         
         <button class="itd-float-btn" data-panel="settings" title="Настройки">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"/>
             <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m-2 2l-4.2 4.2M23 12h-6m-6 0H1m18.2 5.2l-4.2-4.2m-2-2l-4.2-4.2"/>
           </svg>
         </button>
         
         <button class="itd-float-btn" data-panel="debug" title="Debug">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
             <circle cx="12" cy="12" r="3"/>
           </svg>
@@ -221,9 +227,11 @@ console.log("[ITD Floating Panel] Script starting...");
           </div>
           
           <div class="itd-section">
-            <label>Прозрачность фона: <span id="itd-bg-opacity-value">80%</span></label>
-            <input type="range" id="itd-custom-bg-opacity" min="0" max="100" value="80" step="5">
-            <p class="itd-hint">0% = полностью прозрачный, 100% = непрозрачный</p>
+            <label>
+              <input type="checkbox" id="itd-background-transparent" />
+              Прозрачный фон
+            </label>
+            <p class="itd-hint">Включено = полностью прозрачный, выключено = непрозрачный</p>
           </div>
           
           <div class="itd-section">
@@ -540,13 +548,14 @@ console.log("[ITD Floating Panel] Script starting...");
     });
     
     // Загрузить сохранённые данные
-    chrome.storage.local.get(['itdCustomTheme', 'itdAutoTheme', 'itdShaderCode', 'itdAutoShader', 'itdSavedShaders', 'itdActiveShader', 'itdSavedCustomThemes', 'itdActiveCustomTheme'], (data) => {
+    chrome.storage.local.get(['itdCustomTheme', 'itdAutoTheme', 'itdShaderCode', 'itdAutoShader', 'itdSavedShaders', 'itdActiveShader', 'itdSavedCustomThemes', 'itdActiveCustomTheme', 'itdShaderLayerMode'], (data) => {
       const themeSelect = panel.querySelector('#itd-theme-select');
       const autoThemeCheck = panel.querySelector('#itd-auto-theme');
       const shaderCode = panel.querySelector('#itd-shader-code');
       const autoShaderCheck = panel.querySelector('#itd-auto-shader');
       const savedShadersSelect = panel.querySelector('#itd-saved-shaders');
       const savedCustomThemesSelect = panel.querySelector('#itd-saved-custom-themes');
+      const backgroundTransparent = panel.querySelector('#itd-background-transparent');
       
       // Установить сохранённые значения
       if (data.itdCustomTheme) {
@@ -561,6 +570,21 @@ console.log("[ITD Floating Panel] Script starting...");
       if (data.itdAutoShader !== undefined) {
         autoShaderCheck.checked = data.itdAutoShader;
       }
+      
+      // Загрузить состояние прозрачности фона
+      const isTransparent = data.itdBackgroundTransparent || false;
+      backgroundTransparent.checked = isTransparent;
+      
+      // Применить состояние прозрачности сразу
+      if (isTransparent) {
+        document.body.style.background = 'transparent';
+        const layout = document.querySelector('div.layout');
+        if (layout) {
+          layout.style.background = 'transparent';
+        }
+      }
+      
+      console.log("[ITD Floating Panel] Loaded background transparency:", isTransparent);
       
       // Загрузить список сохранённых шейдеров
       if (data.itdSavedShaders) {
@@ -1132,23 +1156,40 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
       chrome.storage.local.remove('itdActiveShader');
     });
     
-    // === Кастомные темы ===
+    // Обработчик чекбокса прозрачности фона
+    const backgroundTransparent = panel.querySelector('#itd-background-transparent');
     
-    // Обработчик слайдера прозрачности фона - применять в реальном времени
-    const bgOpacitySlider = panel.querySelector('#itd-custom-bg-opacity');
-    const bgOpacityValue = panel.querySelector('#itd-bg-opacity-value');
-    
-    bgOpacitySlider.addEventListener('input', () => {
-      bgOpacityValue.textContent = bgOpacitySlider.value + '%';
+    backgroundTransparent.addEventListener('change', () => {
+      const isTransparent = backgroundTransparent.checked;
       
-      // Автоматически применить тему при изменении прозрачности
-      const primary = panel.querySelector('#itd-custom-primary').value;
-      const secondary = panel.querySelector('#itd-custom-secondary').value;
-      const bg = panel.querySelector('#itd-custom-bg').value;
-      const bgOpacity = bgOpacitySlider.value;
-      const gradient = panel.querySelector('#itd-custom-gradient').checked;
+      // Сохранить состояние
+      chrome.storage.local.set({ itdBackgroundTransparent: isTransparent });
       
-      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+      // Применить прозрачность к фону
+      if (isTransparent) {
+        // Полностью прозрачный фон
+        document.body.style.background = 'transparent';
+        const layout = document.querySelector('div.layout');
+        if (layout) {
+          layout.style.background = 'transparent';
+        }
+      } else {
+        // Восстановить обычный фон - применить текущую тему заново
+        const currentTheme = document.documentElement.getAttribute('data-itd-custom-theme');
+        if (currentTheme === 'custom') {
+          // Для кастомной темы применить с непрозрачностью
+          const primary = panel.querySelector('#itd-custom-primary').value;
+          const secondary = panel.querySelector('#itd-custom-secondary').value;
+          const bg = panel.querySelector('#itd-custom-bg').value;
+          const gradient = panel.querySelector('#itd-custom-gradient').checked;
+          applyCustomTheme(primary, secondary, bg, gradient, 100); // 100% непрозрачность
+        } else {
+          // Для готовых тем применить заново
+          applyTheme(currentTheme);
+        }
+      }
+      
+      console.log("[ITD Floating Panel] Background transparency changed to:", isTransparent);
     });
     
     // Автоприменение для color picker'ов и градиента
@@ -1161,36 +1202,32 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
       const primary = primaryInput.value;
       const secondary = secondaryInput.value;
       const bg = bgInput.value;
-      const bgOpacity = bgOpacitySlider.value;
       const gradient = gradientCheck.checked;
-      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+      applyCustomTheme(primary, secondary, bg, gradient, 80);
     });
     
     secondaryInput.addEventListener('input', () => {
       const primary = primaryInput.value;
       const secondary = secondaryInput.value;
       const bg = bgInput.value;
-      const bgOpacity = bgOpacitySlider.value;
       const gradient = gradientCheck.checked;
-      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+      applyCustomTheme(primary, secondary, bg, gradient, 80);
     });
     
     bgInput.addEventListener('input', () => {
       const primary = primaryInput.value;
       const secondary = secondaryInput.value;
       const bg = bgInput.value;
-      const bgOpacity = bgOpacitySlider.value;
       const gradient = gradientCheck.checked;
-      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+      applyCustomTheme(primary, secondary, bg, gradient, 80);
     });
     
     gradientCheck.addEventListener('change', () => {
       const primary = primaryInput.value;
       const secondary = secondaryInput.value;
       const bg = bgInput.value;
-      const bgOpacity = bgOpacitySlider.value;
       const gradient = gradientCheck.checked;
-      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+      applyCustomTheme(primary, secondary, bg, gradient, 80);
     });
     
     // Кастомный шрифт - чекбокс и drop zone
@@ -1266,7 +1303,6 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
       const primary = panel.querySelector('#itd-custom-primary').value;
       const secondary = panel.querySelector('#itd-custom-secondary').value;
       const bg = panel.querySelector('#itd-custom-bg').value;
-      const bgOpacity = panel.querySelector('#itd-custom-bg-opacity').value;
       const gradient = panel.querySelector('#itd-custom-gradient').checked;
       
       if (!name) {
@@ -1274,7 +1310,7 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
         return;
       }
       
-      saveCustomTheme(name, primary, secondary, bg, gradient, bgOpacity, panel);
+      saveCustomTheme(name, primary, secondary, bg, gradient, 80, panel);
     });
     
     // Применить кастомную тему
@@ -1283,10 +1319,9 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
       const primary = panel.querySelector('#itd-custom-primary').value;
       const secondary = panel.querySelector('#itd-custom-secondary').value;
       const bg = panel.querySelector('#itd-custom-bg').value;
-      const bgOpacity = panel.querySelector('#itd-custom-bg-opacity').value;
       const gradient = panel.querySelector('#itd-custom-gradient').checked;
       
-      applyCustomTheme(primary, secondary, bg, gradient, bgOpacity);
+      applyCustomTheme(primary, secondary, bg, gradient, 80);
     });
     
     // Загрузить кастомную тему
@@ -1452,7 +1487,7 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
         primary: primary,
         secondary: secondary,
         bg: bg,
-        bgOpacity: bgOpacity || 80,
+        // bgOpacity НЕ сохраняется
         gradient: gradient,
         created: new Date().toISOString()
       };
@@ -1487,24 +1522,20 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
       const primaryInput = panel.querySelector('#itd-custom-primary');
       const secondaryInput = panel.querySelector('#itd-custom-secondary');
       const bgInput = panel.querySelector('#itd-custom-bg');
-      const bgOpacityInput = panel.querySelector('#itd-custom-bg-opacity');
-      const bgOpacityValue = panel.querySelector('#itd-bg-opacity-value');
       const gradientCheck = panel.querySelector('#itd-custom-gradient');
       
       nameInput.value = theme.name;
       primaryInput.value = theme.primary;
       secondaryInput.value = theme.secondary;
       bgInput.value = theme.bg;
-      bgOpacityInput.value = theme.bgOpacity || 80;
-      bgOpacityValue.textContent = (theme.bgOpacity || 80) + '%';
       gradientCheck.checked = theme.gradient || false;
       
       chrome.storage.local.set({ itdActiveCustomTheme: themeId });
       
-      // Применить тему
-      applyCustomTheme(theme.primary, theme.secondary, theme.bg, theme.gradient, theme.bgOpacity || 80);
+      // Применить тему с фиксированной прозрачностью 80%
+      applyCustomTheme(theme.primary, theme.secondary, theme.bg, theme.gradient, 80);
       
-      console.log("[ITD Floating Panel] Custom theme loaded:", theme.name);
+      console.log("[ITD Floating Panel] Custom theme loaded:", theme.name, "with opacity: 80%");
     });
   }
   
@@ -1549,147 +1580,167 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
   function applyCustomTheme(primary, secondary, bg, gradient, bgOpacity) {
     document.documentElement.setAttribute('data-itd-custom-theme', 'custom');
     
-    // Преобразовать прозрачность из 0-100 в 0-1
-    let opacity = (bgOpacity || 80) / 100;
-    
-    // СОХРАНИТЬ параметры кастомной темы для автозагрузки
-    chrome.storage.local.set({
-      itdCustomTheme: 'custom',
-      itdLastCustomThemeParams: {
-        primary,
-        secondary,
-        bg,
-        gradient,
-        bgOpacity: bgOpacity || 80
-      }
-    });
-    
-    // Определить контрастный цвет текста
-    const textColor = getContrastColor(bg);
-    const cardBg = adjustBrightness(bg, 20);
-    
-    document.documentElement.style.setProperty('--itd-theme-primary', primary);
-    document.documentElement.style.setProperty('--itd-theme-secondary', secondary);
-    document.documentElement.style.setProperty('--color-text', textColor);
-    document.documentElement.style.setProperty('--color-text-secondary', adjustBrightness(textColor, -20));
-    document.documentElement.style.setProperty('--color-border', hexToRgba(primary, 0.3));
-    
-    // Применить градиент или обычный фон
-    if (gradient) {
-      const bg1 = hexToRgba(bg, opacity);
-      const bg2 = hexToRgba(adjustBrightness(bg, 15), opacity);
-      const bg3 = hexToRgba(adjustBrightness(bg, 25), opacity);
+    // Проверить состояние прозрачности фона
+    chrome.storage.local.get(['itdBackgroundTransparent'], (data) => {
+      const isTransparent = data.itdBackgroundTransparent || false;
       
-      document.documentElement.style.setProperty('--color-background', bg1);
-      document.documentElement.style.setProperty('--color-card', hexToRgba(cardBg, opacity * 0.9));
+      // Если включена прозрачность - игнорировать bgOpacity и сделать полностью прозрачным
+      let opacity = isTransparent ? 0 : (bgOpacity || 80) / 100;
       
-      // Создать плавную анимацию градиента
-      if (!document.getElementById('itd-custom-gradient-style')) {
-        const style = document.createElement('style');
-        style.id = 'itd-custom-gradient-style';
-        style.textContent = `
-          @keyframes customGradient {
-            0% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
-            }
-            12.5% {
-              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
-            }
-            25% {
-              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
-            }
-            37.5% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
-            }
-            50% {
-              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
-            }
-            62.5% {
-              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
-            }
-            75% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
-            }
-            87.5% {
-              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
-            }
-            100% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
-            }
-          }
-        `;
-        document.head.appendChild(style);
+      // СОХРАНИТЬ параметры кастомной темы для автозагрузки (БЕЗ bgOpacity - не сохраняем прозрачность)
+      chrome.storage.local.set({
+        itdCustomTheme: 'custom',
+        itdLastCustomThemeParams: {
+          primary,
+          secondary,
+          bg,
+          gradient
+          // bgOpacity НЕ сохраняется - только для текущей сессии
+        }
+      });
+      
+      // Определить контрастный цвет текста
+      const textColor = getContrastColor(bg);
+      const cardBg = adjustBrightness(bg, 20);
+      
+      document.documentElement.style.setProperty('--itd-theme-primary', primary);
+      document.documentElement.style.setProperty('--itd-theme-secondary', secondary);
+      document.documentElement.style.setProperty('--color-text', textColor);
+      document.documentElement.style.setProperty('--color-text-secondary', adjustBrightness(textColor, -20));
+      document.documentElement.style.setProperty('--color-border', hexToRgba(primary, 0.3));
+      
+      if (isTransparent) {
+        // Полностью прозрачный фон
+        document.body.style.background = 'transparent';
+        document.body.style.animation = 'none';
+        
+        const layout = document.querySelector('div.layout');
+        if (layout) {
+          layout.style.background = 'transparent';
+          layout.style.animation = 'none';
+        }
+        
+        document.documentElement.style.setProperty('--color-background', 'transparent');
+        document.documentElement.style.setProperty('--color-card', 'transparent');
       } else {
-        // Обновить существующий стиль
-        const style = document.getElementById('itd-custom-gradient-style');
-        style.textContent = `
-          @keyframes customGradient {
-            0% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
-            }
-            12.5% {
-              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
-            }
-            25% {
-              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
-            }
-            37.5% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
-            }
-            50% {
-              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
-            }
-            62.5% {
-              background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
-            }
-            75% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
-            }
-            87.5% {
-              background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
-            }
-            100% {
-              background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
-            }
+        // Применить градиент или обычный фон с прозрачностью
+        if (gradient) {
+          const bg1 = hexToRgba(bg, opacity);
+          const bg2 = hexToRgba(adjustBrightness(bg, 15), opacity);
+          const bg3 = hexToRgba(adjustBrightness(bg, 25), opacity);
+          
+          document.documentElement.style.setProperty('--color-background', bg1);
+          document.documentElement.style.setProperty('--color-card', hexToRgba(cardBg, opacity * 0.9));
+          
+          // Создать плавную анимацию градиента
+          if (!document.getElementById('itd-custom-gradient-style')) {
+            const style = document.createElement('style');
+            style.id = 'itd-custom-gradient-style';
+            style.textContent = `
+              @keyframes customGradient {
+                0% {
+                  background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+                }
+                12.5% {
+                  background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
+                }
+                25% {
+                  background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
+                }
+                37.5% {
+                  background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+                }
+                50% {
+                  background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
+                }
+                62.5% {
+                  background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
+                }
+                75% {
+                  background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+                }
+                87.5% {
+                  background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
+                }
+                100% {
+                  background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+                }
+              }
+            `;
+            document.head.appendChild(style);
+          } else {
+            // Обновить существующий стиль
+            const style = document.getElementById('itd-custom-gradient-style');
+            style.textContent = `
+              @keyframes customGradient {
+                0% {
+                  background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+                }
+                12.5% {
+                  background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
+                }
+                25% {
+                  background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
+                }
+                37.5% {
+                  background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+                }
+                50% {
+                  background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
+                }
+                62.5% {
+                  background: linear-gradient(135deg, ${bg3} 0%, ${bg1} 25%, ${bg2} 50%, ${bg1} 75%, ${bg3} 100%);
+                }
+                75% {
+                  background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+                }
+                87.5% {
+                  background: linear-gradient(135deg, ${bg2} 0%, ${bg3} 25%, ${bg1} 50%, ${bg3} 75%, ${bg2} 100%);
+                }
+                100% {
+                  background: linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%);
+                }
+              }
+            `;
           }
-        `;
+          
+          document.body.style.background = `linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%)`;
+          document.body.style.animation = 'customGradient 20s ease-in-out infinite';
+          
+          // Применить к основному контейнеру сайта
+          const layout = document.querySelector('div.layout');
+          if (layout) {
+            layout.style.background = `linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%)`;
+            layout.style.animation = 'customGradient 20s ease-in-out infinite';
+          }
+        } else {
+          // Обычный фон
+          const bgWithOpacity = hexToRgba(bg, opacity);
+          const cardBgWithOpacity = hexToRgba(cardBg, opacity * 0.9);
+          
+          document.documentElement.style.setProperty('--color-background', bgWithOpacity);
+          document.documentElement.style.setProperty('--color-card', cardBgWithOpacity);
+          document.body.style.background = bgWithOpacity;
+          document.body.style.animation = 'none';
+          
+          // Применить к основному контейнеру сайта
+          const layout = document.querySelector('div.layout');
+          if (layout) {
+            layout.style.background = bgWithOpacity;
+            layout.style.animation = 'none';
+          }
+          
+          // Удалить стиль градиента
+          const gradientStyle = document.getElementById('itd-custom-gradient-style');
+          if (gradientStyle) {
+            gradientStyle.remove();
+          }
+        }
       }
       
-      document.body.style.background = `linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%)`;
-      document.body.style.animation = 'customGradient 20s ease-in-out infinite';
-      
-      // Применить к основному контейнеру сайта
-      const layout = document.querySelector('div.layout');
-      if (layout) {
-        layout.style.background = `linear-gradient(135deg, ${bg1} 0%, ${bg2} 25%, ${bg3} 50%, ${bg2} 75%, ${bg1} 100%)`;
-        layout.style.animation = 'customGradient 20s ease-in-out infinite';
-      }
-    } else {
-      // Обычный фон
-      const bgWithOpacity = hexToRgba(bg, opacity);
-      const cardBgWithOpacity = hexToRgba(cardBg, opacity * 0.9);
-      
-      document.documentElement.style.setProperty('--color-background', bgWithOpacity);
-      document.documentElement.style.setProperty('--color-card', cardBgWithOpacity);
-      document.body.style.background = bgWithOpacity;
-      document.body.style.animation = 'none';
-      
-      // Применить к основному контейнеру сайта
-      const layout = document.querySelector('div.layout');
-      if (layout) {
-        layout.style.background = bgWithOpacity;
-        layout.style.animation = 'none';
-      }
-      
-      // Удалить стиль градиента
-      const gradientStyle = document.getElementById('itd-custom-gradient-style');
-      if (gradientStyle) {
-        gradientStyle.remove();
-      }
-    }
-    
-    updateButtonColors('custom');
-    console.log("[ITD Floating Panel] Applied custom theme", { gradient, bgOpacity, textColor });
+      updateButtonColors('custom');
+      console.log("[ITD Floating Panel] Applied custom theme", { gradient, bgOpacity, textColor, isTransparent });
+    });
   }
   
   // Определить контрастный цвет текста (белый или чёрный)
@@ -1728,6 +1779,8 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
   
   // Применить тему
   function applyTheme(theme) {
+    console.log("[ITD Floating Panel] Applying theme:", theme, "to interface");
+    
     // Сбросить кастомные стили перед применением обычной темы
     document.body.style.background = '';
     document.body.style.animation = '';
@@ -1749,6 +1802,10 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
     
     // Применить новую тему
     document.documentElement.setAttribute('data-itd-custom-theme', theme);
+    
+    // Также применить тему к интерфейсу панели для liquid glass
+    document.documentElement.setAttribute('data-itd-theme', theme);
+    
     updateButtonColors(theme);
     
     // Сохранить выбор (удалить параметры кастомной темы)
@@ -1757,27 +1814,28 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
       itdLastCustomThemeParams: null
     });
     
+    // Проверить состояние прозрачности и применить если нужно
+    chrome.storage.local.get(['itdBackgroundTransparent'], (data) => {
+      const isTransparent = data.itdBackgroundTransparent || false;
+      if (isTransparent) {
+        setTimeout(() => {
+          document.body.style.background = 'transparent';
+          const layout = document.querySelector('div.layout');
+          if (layout) {
+            layout.style.background = 'transparent';
+          }
+          console.log("[ITD Floating Panel] Applied transparent background after theme");
+        }, 50);
+      }
+    });
+    
     console.log("[ITD Floating Panel] Applied theme:", theme);
   }
   
   // Обновить цвета кнопок в соответствии с темой
   function updateButtonColors(theme) {
-    const themeColors = {
-      default: { primary: '#667eea', secondary: '#764ba2' },
-      blue: { primary: '#87c9ff', secondary: '#6a8fff' },
-      purple: { primary: '#b794f6', secondary: '#8b5cf6' },
-      cyan: { primary: '#06b6d4', secondary: '#0891b2' },
-      green: { primary: '#10b981', secondary: '#059669' },
-      red: { primary: '#ef4444', secondary: '#dc2626' }
-    };
-    
-    const colors = themeColors[theme] || themeColors.default;
-    
-    // Обновить CSS переменные для кнопок
-    document.documentElement.style.setProperty('--itd-theme-primary', colors.primary);
-    document.documentElement.style.setProperty('--itd-theme-secondary', colors.secondary);
-    
-    console.log("[ITD Floating Panel] Button colors updated for theme:", theme);
+    // НЕ меняем фон вкладок - только логируем применение темы
+    console.log("[ITD Floating Panel] Theme applied (no button color changes):", theme);
   }
   
   // Применить шейдер (поддержка multipass как на Shadertoy)
@@ -1787,16 +1845,129 @@ o = tanh(o / 1e3 / length(ru - vec2(.5, .3)) + .1 * dot(ru, ru));
     
     console.log("[ITD Floating Panel] Applying shader...");
     
+    // Проверка WebGL с детальной диагностикой
+    function checkWebGLSupport() {
+      const canvas = document.createElement("canvas");
+      const gl = canvas.getContext("webgl2") || canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      
+      if (!gl) {
+        return {
+          supported: false,
+          reason: "WebGL context not available",
+          details: "Браузер не поддерживает WebGL или он отключен в настройках"
+        };
+      }
+      
+      // Проверка аппаратного ускорения
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        console.log("[ITD Floating Panel] GPU:", renderer);
+        
+        if (renderer.includes('SwiftShader') || renderer.includes('Software')) {
+          return {
+            supported: false,
+            reason: "Software rendering detected",
+            details: "WebGL работает в программном режиме. Включите аппаратное ускорение в настройках браузера"
+          };
+        }
+      }
+      
+      // Проверка максимального размера текстуры
+      const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      console.log("[ITD Floating Panel] Max texture size:", maxTextureSize);
+      
+      if (maxTextureSize < 2048) {
+        return {
+          supported: false,
+          reason: "Insufficient GPU capabilities",
+          details: "GPU не поддерживает необходимые возможности для шейдеров"
+        };
+      }
+      
+      return { supported: true, context: gl };
+    }
+    
+    const webglCheck = checkWebGLSupport();
+    
+    if (!webglCheck.supported) {
+      console.error("[ITD Floating Panel] WebGL check failed:", webglCheck.reason);
+      console.error("[ITD Floating Panel]", webglCheck.details);
+      
+      // Показать уведомление вместо alert
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(239, 68, 68, 0.95);
+        color: white;
+        padding: 16px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 999999;
+        max-width: 400px;
+        font-family: system-ui, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+      `;
+      notification.innerHTML = `
+        <div style="font-weight: 600; margin-bottom: 8px;">⚠️ Шейдеры недоступны</div>
+        <div style="opacity: 0.9;">${webglCheck.details}</div>
+        <div style="margin-top: 12px; font-size: 12px; opacity: 0.8;">
+          Проверьте: chrome://settings/system → Аппаратное ускорение
+        </div>
+      `;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.transition = 'opacity 0.3s ease';
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+      }, 8000);
+      
+      return;
+    }
+    
     const canvas = document.createElement("canvas");
     canvas.id = "itd-shader-canvas";
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    
+    // Проверить режим слоя шейдера
+    chrome.storage.local.get(['itdShaderLayerMode'], (data) => {
+      const layerMode = data.itdShaderLayerMode || 'above';
+      
+      if (layerMode === 'below') {
+        canvas.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          z-index: -1;
+          pointer-events: none;
+        `;
+        console.log("[ITD Floating Panel] Shader layer: below background");
+      } else {
+        canvas.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          z-index: 999999;
+          pointer-events: none;
+        `;
+        console.log("[ITD Floating Panel] Shader layer: above background");
+      }
+    });
+    
     document.body.appendChild(canvas);
     
     const gl = canvas.getContext("webgl2") || canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     if (!gl) {
       console.error("[ITD Floating Panel] WebGL not supported");
-      alert("WebGL не поддерживается в вашем браузере");
       return;
     }
     
@@ -2359,7 +2530,7 @@ void main() {
       }
       
       // Найти textarea для поста на странице
-      const postTextarea = document.querySelector('textarea[placeholder*="пост"], textarea[name*="text"], textarea[class*="post"]');
+      const postTextarea = document.querySelector('textarea[placeholder*="пост"], textarea[name*="text"], textarea[class*="post"], textarea.wall-post-form__textarea');
       if (postTextarea) {
         postTextarea.value = text;
         postTextarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2374,6 +2545,59 @@ void main() {
     
     console.log("[ITD Floating Panel] AI panel setup");
   }
+
+  // Функция для определения и преобразования ссылок в кликабельные элементы
+  function makeLinksClickable(text) {
+    // Регулярное выражение для поиска URL
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+    // Заменяем URL на HTML ссылки
+    return text.replace(urlRegex, (url) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    });
+  }
+
+  // Функция для вставки текста со ссылками в поле поста
+  function insertTextWithLinks(text) {
+    if (!text) {
+      alert('Нет текста для вставки');
+      return false;
+    }
+
+    // Найти textarea для поста на странице
+    const postTextarea = document.querySelector('textarea[placeholder*="пост"], textarea[name*="text"], textarea[class*="post"], textarea.wall-post-form__textarea');
+
+    if (postTextarea) {
+      // Для обычного textarea просто вставляем текст
+      postTextarea.value = text;
+      postTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+      postTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+      alert('Текст вставлен в пост!');
+      return true;
+    }
+
+    // Попробовать найти contenteditable элемент
+    const editableDiv = document.querySelector('[contenteditable="true"]');
+    if (editableDiv) {
+      // Преобразуем ссылки в кликабельные элементы
+      const htmlWithLinks = makeLinksClickable(text);
+      editableDiv.innerHTML = htmlWithLinks;
+      editableDiv.dispatchEvent(new Event('input', { bubbles: true }));
+      editableDiv.dispatchEvent(new Event('change', { bubbles: true }));
+      alert('Текст со ссылками вставлен в пост!');
+      return true;
+    }
+
+    // Если не нашли поле - копируем в буфер
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Поле поста не найдено. Текст скопирован в буфер обмена!');
+    }).catch(() => {
+      alert('Не удалось вставить текст или скопировать в буфер');
+    });
+
+    return false;
+  }
+
   
   // Настройка панели баннера
   function setupBannerPanel(panel) {
@@ -2636,20 +2860,52 @@ void main() {
   // Инициализация
   function init() {
     // Загрузить и применить сохранённую тему сразу
-    chrome.storage.local.get(['itdCustomTheme', 'itdLastCustomThemeParams', 'itdAutoTheme', 'itdShaderCode', 'itdAutoShader', 'itdCustomFont', 'itdCustomFontName'], (data) => {
+    chrome.storage.local.get(['itdCustomTheme', 'itdLastCustomThemeParams', 'itdAutoTheme', 'itdShaderCode', 'itdAutoShader', 'itdCustomFont', 'itdCustomFontName', 'itdBackgroundTransparent'], (data) => {
       // Применить тему если автозапуск включен
       const autoTheme = data.itdAutoTheme !== undefined ? data.itdAutoTheme : true;
+      const isTransparent = data.itdBackgroundTransparent || false;
+      console.log("[ITD Floating Panel] Loaded theme data:", data.itdCustomTheme, "Auto:", autoTheme, "Transparent:", isTransparent);
+      
       if (autoTheme && data.itdCustomTheme) {
         console.log("[ITD Floating Panel] Auto-applying theme:", data.itdCustomTheme);
         
-        // Если это кастомная тема - применить с параметрами
+        // Применить тему к интерфейсу панели
+        document.documentElement.setAttribute('data-itd-theme', data.itdCustomTheme);
+        
+        // Если это кастомная тема - применить с параметрами и сохраненной прозрачностью
         if (data.itdCustomTheme === 'custom' && data.itdLastCustomThemeParams) {
           const params = data.itdLastCustomThemeParams;
           console.log("[ITD Floating Panel] Applying custom theme with params:", params);
-          applyCustomTheme(params.primary, params.secondary, params.bg, params.gradient, params.bgOpacity);
+          // Для кастомной темы используем фиксированную прозрачность 80%
+          applyCustomTheme(params.primary, params.secondary, params.bg, params.gradient, 80);
         } else {
-          // Обычная тема
+          // Обычная тема - прозрачность НЕ применяется
           applyTheme(data.itdCustomTheme);
+        }
+        
+        // Применить состояние прозрачности после применения темы
+        if (isTransparent) {
+          setTimeout(() => {
+            document.body.style.background = 'transparent';
+            const layout = document.querySelector('div.layout');
+            if (layout) {
+              layout.style.background = 'transparent';
+            }
+            console.log("[ITD Floating Panel] Applied transparent background on init");
+          }, 100);
+        }
+      } else {
+        // Если нет сохраненной темы, применить дефолтную к интерфейсу
+        console.log("[ITD Floating Panel] No saved theme, applying default");
+        document.documentElement.setAttribute('data-itd-theme', 'default');
+        
+        // Все равно применить прозрачность если включена
+        if (isTransparent) {
+          document.body.style.background = 'transparent';
+          const layout = document.querySelector('div.layout');
+          if (layout) {
+            layout.style.background = 'transparent';
+          }
         }
       }
       

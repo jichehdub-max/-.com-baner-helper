@@ -1,4 +1,4 @@
-# ITD Banner Redraw Helper
+![alt text](image.png)# ITD Banner Redraw Helper
 
 Расширение для точного переноса изображения в область рисования на `itd.com` (включая `canvas.drawing-canvas`) с поддержкой анимированных GIF/MP4 баннеров, кастомных тем и WebGL шейдеров.
 

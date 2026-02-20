@@ -1,40 +1,77 @@
 /* ========== ВЕРТИКАЛЬНАЯ ПАНЕЛЬ НАВИГАЦИИ (СТИЛЬ ИТД.COM) ========== */
 
 :root {
-  --itd-theme-primary: #667eea;
-  --itd-theme-secondary: #764ba2;
+  --itd-theme-primary: #ffffff; /* Белый как на сайте */
+  --itd-theme-secondary: #e5e7eb; /* Светло-серый */
 }
 
 #itd-floating-panel {
-  position: fixed;
-  left: 598px; /* Еще ближе к ленте */
-  top: 450px;
+  position: fixed !important;                                                                                                                                                                                                                                                                                                                                                                                                                         а
+  left: 5px !important;
+  top: 41.67vh !important;
   z-index: 999997;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* GLASSMORPHISM STYLES (без WebGL) */
 .itd-floating-buttons {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 20px 12px;
-  background: rgba(18, 18, 20, 0.6); /* Полупрозрачный фон */
-  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 40px;
-  backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.4); /* Темнее */
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    0 8px 32px rgba(0, 0, 0, 0.37),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
+
+/* Темы для интерфейса */
+[data-itd-theme="default"] .itd-floating-buttons {
+  background: rgba(30, 30, 35, 0.7); /* Темно-серый */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+[data-itd-theme="blue"] .itd-floating-buttons {
+  background: rgba(20, 30, 50, 0.6); /* Темнее */
+  border: 1px solid rgba(135, 201, 255, 0.2);
+}
+
+[data-itd-theme="purple"] .itd-floating-buttons {
+  background: rgba(30, 20, 50, 0.6); /* Темнее */
+  border: 1px solid rgba(183, 148, 246, 0.2);
+}
+
+[data-itd-theme="cyan"] .itd-floating-buttons {
+  background: rgba(10, 30, 40, 0.6); /* Темнее */
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+[data-itd-theme="green"] .itd-floating-buttons {
+  background: rgba(10, 30, 20, 0.6); /* Темнее */
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+[data-itd-theme="red"] .itd-floating-buttons {
+  background: rgba(40, 10, 10, 0.6); /* Темнее */
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Адаптация цветов панелей под темы */
+/* Адаптация цветов панелей под темы - УБРАНО, фон не меняется */
 
 .itd-float-btn {
   width: 52px;
   height: 52px;
-  border: none; /* Убрать обводку */
+  border: none;
   border-radius: 50%;
-  background: transparent; /* Прозрачный фон для неактивных */
-  color: rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: rgba(255, 255, 255, 1); /* Полностью непрозрачный цвет */
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -44,13 +81,18 @@
 }
 
 .itd-float-btn svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   transition: all 0.3s ease;
+  opacity: 1 !important; /* Принудительно непрозрачные иконки */
+  position: relative;
+  z-index: 10;
+  color: rgba(255, 255, 255, 1) !important; /* Принудительно белый цвет */
+  stroke: rgba(255, 255, 255, 1) !important; /* Принудительно белая обводка */
 }
 
 .itd-float-btn:hover {
-  background: rgba(60, 60, 70, 0.4);
+  background: transparent; /* Убираем фон при hover */
   color: rgba(255, 255, 255, 0.8);
   transform: scale(1.08);
 }
@@ -120,49 +162,26 @@
   border-color: rgba(239, 68, 68, 0.2);
 }
 
-.itd-float-btn {
-  width: 48px;
-  height: 48px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(60, 60, 70, 0.8);
-  color: #a0a0b0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-}
 
-.itd-float-btn:hover {
-  background: rgba(80, 80, 90, 0.9);
-  color: #ffffff;
-  transform: scale(1.12) rotate(5deg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
 
-.itd-float-btn:active {
-  transform: scale(1.05);
-}
-
+/* Активная кнопка - базовый стиль */
 .itd-float-btn.active {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  background: linear-gradient(135deg, var(--itd-theme-primary) 0%, var(--itd-theme-secondary) 100%);
   color: #ffffff;
-  box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
-  animation: pulse 2s ease infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(255, 107, 107, 0.7);
-  }
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 0 24px rgba(102, 126, 234, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* Активная кнопка в цвет темы */
+[data-itd-custom-theme="default"] .itd-float-btn.active {
+  background: linear-gradient(135deg, #ffffff 0%, #e5e7eb 100%);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+  color: #000000; /* Черный текст для белой кнопки */
+}
+
 [data-itd-custom-theme="blue"] .itd-float-btn.active {
   background: linear-gradient(135deg, #87c9ff 0%, #6a8fff 100%);
   box-shadow: 0 0 20px rgba(135, 201, 255, 0.5);
@@ -201,7 +220,7 @@
   right: -400px;
   width: 360px;
   height: 100vh;
-  background: rgba(26, 31, 46, 0.98);
+  background: rgb(26, 31, 46); /* Полностью непрозрачный */
   backdrop-filter: blur(20px);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
@@ -793,4 +812,18 @@
 
 .itd-drop-zone .itd-font-name:empty {
   display: none;
+}
+
+/* Стили для чекбокса прозрачности фона */
+#itd-background-transparent {
+  margin-right: 8px;
+  transform: scale(1.2);
+}
+
+.itd-section label {
+  display: flex;
+  align-items: center;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
 }
